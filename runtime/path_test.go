@@ -1,4 +1,4 @@
-package ink
+package runtime
 
 import "github.com/stretchr/testify/assert"
 import "testing"

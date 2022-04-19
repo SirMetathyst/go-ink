@@ -1,4 +1,4 @@
-package ink
+package runtime
 
 type NamedContent interface {
 	Name() string

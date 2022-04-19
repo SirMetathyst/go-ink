@@ -1,4 +1,4 @@
-package ink
+package runtime
 
 type SearchResult struct {
 	Obj         Object

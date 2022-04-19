@@ -1,4 +1,4 @@
-package ink
+package runtime
 
 // Source: https://github.com/inkle/ink/blob/master/ink-engine-runtime/Object.cs#L10
 // Go favours composition over inheritance and does not support it, so we use an interface

@@ -1,4 +1,4 @@
-package ink
+package runtime
 
 import "hash/fnv"
 
