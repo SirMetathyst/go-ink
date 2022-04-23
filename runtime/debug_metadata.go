@@ -2,7 +2,6 @@ package runtime
 
 import "fmt"
 
-// Required because std math does not yet provide a generic min function
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -10,7 +9,6 @@ func min(a, b int) int {
 	return b
 }
 
-// Required because std math does not yet provide a generic max function
 func max(a, b int) int {
 	if a > b {
 		return a
@@ -18,20 +16,15 @@ func max(a, b int) int {
 	return b
 }
 
-// Source: https://github.com/inkle/ink/blob/master/ink-engine-runtime/DebugMetadata.cs
-
 type DebugMetadata struct {
-	StartLineNumber      int    // source: public, default value: 0
-	EndLineNumber        int    // source: public, default value: 0
-	StartCharacterNumber int    // source: public, default value: 0
-	EndCharacterNumber   int    // source: public, default value: 0
-	FileName             string // source: public, default value: null
-	SourceName           string // source: public, default value: null
+	StartLineNumber      int
+	EndLineNumber        int
+	StartCharacterNumber int
+	EndCharacterNumber   int
+	FileName             string
+	SourceName           string
 }
 
-// Source: https://github.com/inkle/ink/blob/master/ink-engine-runtime/DebugMetadata.cs#L21
-
-// Merge ...
 func (s *DebugMetadata) Merge(dm *DebugMetadata) *DebugMetadata {
 	newDebugMetadata := new(DebugMetadata)
 
