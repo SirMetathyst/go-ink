@@ -28,23 +28,6 @@ func (s Path) Component(index int) (PathComponent, bool) {
 	return s.components[index], true
 }
 
-func (s Path) ContainsNamedComponent() bool {
-	for _, comp := range s.components {
-		if comp.IsIndex() == false {
-			return true
-		}
-	}
-	return false
-}
-
-func (s Path) FirstComponent() (PathComponent, bool) {
-	if len(s.components) > 0 {
-		return s.components[0], true
-	} else {
-		return PathComponent{}, false
-	}
-}
-
 func (s Path) LastComponent() (PathComponent, bool) {
 	lastComponentIdx := len(s.components) - 1
 	if lastComponentIdx >= 0 {
@@ -54,7 +37,7 @@ func (s Path) LastComponent() (PathComponent, bool) {
 	}
 }
 
-func (s Path) Tail() Path {
+func (s Path) Tail() *Path {
 	if len(s.components) >= 2 {
 		tailComponents := s.components[1:]
 		tailComponentsCopy := make([]PathComponent, len(tailComponents))
@@ -67,7 +50,7 @@ func (s Path) Tail() Path {
 	}
 }
 
-func (s Path) NewPathByAppendingPath(pathToAppend Path) Path {
+func (s Path) NewPathByAppendingPath(pathToAppend *Path) *Path {
 
 	var components []PathComponent
 
@@ -95,7 +78,7 @@ func (s Path) NewPathByAppendingPath(pathToAppend Path) Path {
 	return NewPathFromComponents(components)
 }
 
-func (s Path) NewPathByAppendingComponent(c PathComponent) Path {
+func (s Path) NewPathByAppendingComponent(c PathComponent) *Path {
 
 	var x []PathComponent
 	x = append(x, s.components...)
@@ -112,7 +95,7 @@ func (s Path) String() string {
 	return s.componentsString
 }
 
-func (s Path) Equals(otherPath Path) bool {
+func (s Path) Equals(otherPath *Path) bool {
 
 	if len(otherPath.components) != len(s.components) {
 		return false
@@ -147,16 +130,16 @@ func joinComponents(components []PathComponent, sep string) string {
 	return sb.String()
 }
 
-func NewPath() Path {
-	return Path{}
+func NewPath() *Path {
+	return &Path{}
 }
 
-func NewRelativePath() Path {
-	return Path{isRelative: true, componentsString: "."}
+func NewRelativePath() *Path {
+	return &Path{isRelative: true, componentsString: "."}
 }
 
-func NewPathFromComponentsString(componentsString string) Path {
-	p := Path{}
+func NewPathFromComponentsString(componentsString string) *Path {
+	p := &Path{}
 
 	p.componentsString = componentsString
 	substring := componentsString
@@ -199,13 +182,13 @@ func NewPathFromComponentsString(componentsString string) Path {
 	return p
 }
 
-func NewPathFromComponents(components []PathComponent) Path {
+func NewPathFromComponents(components []PathComponent) *Path {
 	componentsString := joinComponents(components, ".")
-	return Path{components: components, componentsString: componentsString}
+	return &Path{components: components, componentsString: componentsString}
 }
 
-func NewRelativePathFromComponents(components []PathComponent) Path {
+func NewRelativePathFromComponents(components []PathComponent) *Path {
 	componentsString := joinComponents(components, ".")
 	componentsString = "." + componentsString
-	return Path{components: components, isRelative: true, componentsString: componentsString}
+	return &Path{components: components, isRelative: true, componentsString: componentsString}
 }

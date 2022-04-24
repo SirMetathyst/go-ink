@@ -10,6 +10,10 @@ var (
 	ErrPathComponentName  = errors.New("path component: name must not be empty")
 )
 
+var (
+	ParentPathComponent = MustNewPathComponentFromName("^")
+)
+
 type PathComponent struct {
 	index int
 	name  string
