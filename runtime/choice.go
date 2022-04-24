@@ -5,7 +5,7 @@ type Choice struct {
 	Text                string
 	TargetPath          *Path
 	SourcePath          string
-	ThreadAtGeneration  *CallStackThread
+	ThreadAtGeneration  *Thread
 	Index               int
 	OriginalThreadIndex int
 	IsInvisibleDefault  bool

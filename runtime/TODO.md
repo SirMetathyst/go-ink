@@ -1,11 +1,8 @@
 TODO:
 - CallStack
-- Choice Point
-- Control Command
+- Thread
 - Divert
-- Error
 - Flow
-- Glue
 - Ink List
 - Json Serialization
 - List Definition
@@ -13,7 +10,6 @@ TODO:
 - Native Functional Call
 - Pointer
 - Profiler
-- Push Pop
 - SimpleJson
 - State Patch
 - Story
@@ -23,6 +19,10 @@ TODO:
 - Value
 
 DONE:
+- Glue
+- Error
+- Control Command
+- Choice Point
 - Choice
 - Void
 - Variable Reference
