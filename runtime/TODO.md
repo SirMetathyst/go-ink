@@ -1,24 +1,24 @@
 TODO:
-- CallStack
-- Thread
-- Divert
 - Flow
 - Ink List
 - Json Serialization
 - List Definition
 - List Definitions Origin
 - Native Functional Call
-- Pointer
 - Profiler
 - SimpleJson
 - State Patch
 - Story
 - Story Exception
 - Story State
-- Tag
 - Value
 
 DONE:
+- CallStack
+- Thread
+- Divert
+- Tag
+- Pointer
 - Glue
 - Error
 - Control Command

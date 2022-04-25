@@ -286,7 +286,7 @@ func (s *Container) ContentAtPath(path *Path) SearchResult {
 }
 
 func NewContainer() *Container {
-	s := &Container{}
+	s := &Container{namedContent: map[string]NamedContent{}}
 	s.objectImpl = &objectImpl{instance: s}
 	return s
 }
