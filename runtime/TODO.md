@@ -2,8 +2,6 @@ TODO:
 - Flow
 - Ink List
 - Json Serialization
-- List Definition
-- List Definitions Origin
 - Native Functional Call
 - Profiler
 - SimpleJson
@@ -11,9 +9,11 @@ TODO:
 - Story
 - Story Exception
 - Story State
-- Value
 
 DONE:
+- List Definitions Origin
+- Value
+- List Definition
 - CallStack
 - Thread
 - Divert
