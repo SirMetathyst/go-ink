@@ -4,12 +4,12 @@ TODO:
 - Native Functional Call
 - Profiler
 - SimpleJson
-- State Patch
 - Story
-- Story Exception
 - Story State
 
 DONE:
+- Story Exception
+- State Patch
 - Ink List
 - List Definitions Origin
 - Value
