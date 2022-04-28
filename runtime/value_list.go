@@ -34,28 +34,28 @@ func (s *ListValue) Cast(newType ValueType) (Value, error) {
 		return s, nil
 	case ValueTypeInt:
 
-		key, value := s.Value.MaxItem()
-		if key.IsNil() {
+		pair := s.Value.MaxItem()
+		if pair.Key.IsNil() {
 			return NewIntValue(0), nil
 		}
 
-		return NewIntValue(value), nil
+		return NewIntValue(pair.Value), nil
 
 	case ValueTypeFloat:
 
-		key, value := s.Value.MaxItem()
-		if key.IsNil() {
+		pair := s.Value.MaxItem()
+		if pair.Key.IsNil() {
 			return NewFloatValue(0.0), nil
 		}
-		return NewFloatValue(float64(value)), nil
+		return NewFloatValue(float64(pair.Value)), nil
 
 	case ValueTypeString:
 
-		key, value := s.Value.MaxItem()
-		if key.IsNil() {
+		pair := s.Value.MaxItem()
+		if pair.Key.IsNil() {
 			return NewStringValue(""), nil
 		}
-		return NewStringValue(key.String()), nil
+		return NewStringValue(pair.Key.String()), nil
 	}
 
 	return nil, errors.New("cast to specified value type is not valid for this value")
@@ -84,7 +84,7 @@ func NewListValueFromInkList(inkList *InkList) *ListValue {
 }
 
 func NewListValueFromSingleInkListItem(singleItem InkListItem, singleValue int) *ListValue {
-	s := &ListValue{Value: NewInkListFromSingleItem(singleItem, singleValue)}
+	s := &ListValue{Value: NewInkListFromKeyValuePair(KeyValuePair[InkListItem, int]{singleItem, singleValue})}
 	s.objectImpl = &objectImpl{instance: s}
 	return s
 }

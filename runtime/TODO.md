@@ -1,6 +1,5 @@
 TODO:
 - Flow
-- Ink List
 - Json Serialization
 - Native Functional Call
 - Profiler
@@ -11,6 +10,7 @@ TODO:
 - Story State
 
 DONE:
+- Ink List
 - List Definitions Origin
 - Value
 - List Definition

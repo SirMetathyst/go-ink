@@ -43,6 +43,12 @@ func (s *ListDefinition) ContainsItem(item InkListItem) bool {
 	return ok
 }
 
+func (s *ListDefinition) ContainsItemWithName(itemName string) bool {
+
+	_, ok := s.itemNameToValues[itemName]
+	return ok
+}
+
 func (s *ListDefinition) TryGetItemWithValue(value int) (InkListItem, bool) {
 
 	for itemKey, itemValue := range s.itemNameToValues {
