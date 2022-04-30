@@ -1,13 +1,13 @@
 TODO:
-- Flow
 - Json Serialization
 - Native Functional Call
 - Profiler
-- SimpleJson
 - Story
 - Story State
 
 DONE:
+- SimpleJson
+- Flow
 - Story Exception
 - State Patch
 - Ink List
