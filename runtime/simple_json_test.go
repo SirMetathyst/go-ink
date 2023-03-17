@@ -1,4 +1,4 @@
-package simple_json_test
+package runtime_test
 
 import (
 	"fmt"
@@ -240,7 +240,7 @@ func Walk(w *Walker) {
 		assert.Equal(w.t, w.expect[w.index], fmt.Sprintf("STRING:`%s`", v))
 		w.index++
 
-	case int64:
+	case int:
 		//fmt.Printf("INT:`%d`\n", v)
 		assert.Equal(w.t, w.expect[w.index], fmt.Sprintf("INT:`%d`", v))
 		w.index++
