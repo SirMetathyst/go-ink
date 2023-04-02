@@ -2,6 +2,8 @@ package runtime
 
 import "fmt"
 
+var NullPointer = NewPointer(nil, -1)
+
 // Pointer
 // Internal structure used to point to a particular / current point in the story.
 // Where Path is a set of components that make content fully addressable, this is
@@ -14,60 +16,62 @@ type Pointer struct {
 	Index     int
 }
 
-func NewPointer(container *Container, index int) *Pointer {
+func NewPointer(container *Container, index int) Pointer {
 
-	newPointer := new(Pointer)
+	newPointer := Pointer{}
 	newPointer.Container = container
 	newPointer.Index = index
 
 	return newPointer
 }
 
-func (s *Pointer) Resolve() Object {
+func (s Pointer) Resolve() Object {
 
 	if s.Index < 0 {
 		return s.Container
 	}
+
 	if s.Container == nil {
 		return nil
 	}
+
 	if len(s.Container.Content()) == 0 {
 		return s.Container
 	}
+
 	if s.Index >= len(s.Container.Content()) {
 		return nil
 	}
+
 	return s.Container.Content()[s.Index]
 }
 
-func (s *Pointer) IsNull() bool {
+func (s Pointer) IsNull() bool {
 	return s.Container == nil
 }
 
-func (s *Pointer) Path() *Path {
+func (s Pointer) Path() *Path {
+
 	if s.IsNull() {
 		return nil
 	}
+
 	if s.Index >= 0 {
-		return s.Container.Path().NewPathByAppendingComponent(NewPathComponentFromIndex(s.Index))
-	} else {
-		return s.Container.Path()
+		return s.Container.Path(s.Container).PathByAppendingComponent(NewPathComponentFromIndex(s.Index))
 	}
+
+	return s.Container.Path(s.Container)
 }
 
-func (s *Pointer) String() string {
+func (s Pointer) String() string {
 
 	if s.Container == nil {
 		return "Ink Pointer (null)"
 	}
 
-	return "Ink Pointer -> " + s.Container.Path().String() + " -- index " + fmt.Sprint(s.Index)
+	return "Ink Pointer -> " + s.Container.Path(s.Container).String() + " -- index " + fmt.Sprint(s.Index)
 }
 
-func StartOfPointer(container *Container) *Pointer {
+func StartOfPointer(container *Container) Pointer {
 	return NewPointer(container, 0)
-}
-
-func NullPointer() *Pointer {
-	return NewPointer(nil, -1)
 }

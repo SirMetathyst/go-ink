@@ -3,76 +3,49 @@ package runtime
 type ListDefinition struct {
 
 	// Private
-	name             string
-	items            map[*InkListItem]int
-	itemNameToValues map[string]int
+	_name             string
+	_items            map[InkListItem]int
+	_itemNameToValues map[string]int
 }
 
 func (s *ListDefinition) Name() string {
-	return s.name
+	return s._name
 }
 
-func (s *ListDefinition) Items() map[*InkListItem]int {
+func (s *ListDefinition) Items() map[InkListItem]int {
 
-	if s.items == nil {
-		s.items = make(map[*InkListItem]int, 0)
-		for k, v := range s.itemNameToValues {
-			item := NewInkListItem(s.name, k)
-			s.items[item] = v
-		}
+	if s._items != nil {
+		return s._items
 	}
 
-	return s.items
-}
+	s._items = make(map[InkListItem]int)
+	for key, value := range s._itemNameToValues {
 
-func (s *ListDefinition) ValueForItem(item *InkListItem) int {
-
-	if intVal, ok := s.itemNameToValues[item.ItemName()]; ok {
-		return intVal
-	} else {
-		return 0
-	}
-}
-
-func (s *ListDefinition) ContainsItem(item *InkListItem) bool {
-
-	if item.OriginName() != s.Name() {
-		return false
+		item := NewInkListItem(s.Name(), key)
+		s._items[item] = value
 	}
 
-	_, ok := s.itemNameToValues[item.ItemName()]
-	return ok
+	return s._items
 }
 
-func (s *ListDefinition) ContainsItemWithName(itemName string) bool {
+func (s *ListDefinition) TryGetItemWithValue(val int) (InkListItem, bool) {
 
-	_, ok := s.itemNameToValues[itemName]
-	return ok
-}
+	for key, value := range s._itemNameToValues {
 
-func (s *ListDefinition) TryGetItemWithValue(val int) (*InkListItem, bool) {
-
-	for k, v := range s.itemNameToValues {
-		if v == val {
-			item := NewInkListItem(s.name, k)
+		if value == val {
+			item := NewInkListItem(s.Name(), key)
 			return item, true
 		}
 	}
 
-	return nil, false
-}
-
-func (s *ListDefinition) TryGetValueForItem(item *InkListItem) (int, bool) {
-
-	v, ok := s.itemNameToValues[item.ItemName()]
-	return v, ok
+	return InkListItem{}, false
 }
 
 func NewListDefinition(name string, items map[string]int) *ListDefinition {
 
-	newListDefintion := new(ListDefinition)
-	newListDefintion.name = name
-	newListDefintion.itemNameToValues = items
+	newListDefinition := new(ListDefinition)
+	newListDefinition._name = name
+	newListDefinition._itemNameToValues = items
 
-	return newListDefintion
+	return newListDefinition
 }

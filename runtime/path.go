@@ -6,149 +6,119 @@ import (
 	"strings"
 )
 
-const (
-	ParentID = "^"
-)
-
 type Path struct {
-	isRelative       bool
-	components       []*PathComponent
-	componentsString string
+	_isRelative       bool
+	_components       []*PathComponent
+	_componentsString string
 }
 
 func (s *Path) Component(index int) *PathComponent {
-	return s.components[index]
+	return s._components[index]
 }
 
 func (s *Path) IsRelative() bool {
-	return s.isRelative
-}
-
-func (s *Path) Head() *PathComponent {
-
-	if len(s.components) > 0 {
-		return s.components[0]
-	} else {
-		return nil
-	}
+	return s._isRelative
 }
 
 func (s *Path) Tail() *Path {
 
-	if len(s.components) >= 2 {
-		tailComps := s.components[1:]
+	if len(s._components) >= 2 {
+
+		//tailComps := s._components.GetRange(1, s._components.Count()-1)
+		tailComps := s._components[1:]
+
 		return NewPathFromComponents(tailComps, false)
-	} else {
-		return NewSelfPath()
+
 	}
+
+	newPath := NewPath()
+	newPath._isRelative = true
+
+	return newPath
 }
 
 func (s *Path) Length() int {
-	return len(s.components)
+	return len(s._components)
 }
 
 func (s *Path) LastComponent() *PathComponent {
 
-	lastComponentIdx := len(s.components) - 1
+	lastComponentIdx := len(s._components) - 1
+
 	if lastComponentIdx >= 0 {
-		return s.components[lastComponentIdx]
-	} else {
-		return nil
-	}
-}
-
-func (s *Path) ContainsNamedComponent() bool {
-
-	for _, comp := range s.components {
-		if !comp.IsIndex() {
-			return true
-		}
+		return s._components[lastComponentIdx]
 	}
 
-	return false
+	return nil
 }
 
 func NewPath() *Path {
-	return new(Path)
-}
-
-func NewPathFromHeadTail(head *PathComponent, tail *Path) *Path {
 
 	newPath := new(Path)
-	newPath.components = append(newPath.components, head)
-	newPath.components = append(newPath.components, tail.components...)
+	newPath._components = []*PathComponent{}
 
 	return newPath
 }
 
 func NewPathFromComponents(components []*PathComponent, relative bool) *Path {
 
-	newPath := new(Path)
-	newPath.components = append(newPath.components, components...)
-	newPath.isRelative = relative
+	newPath := NewPath()
+	newPath._components = append([]*PathComponent{}, components...)
+	newPath._isRelative = relative
 
 	return newPath
 }
 
-func NewPathFromComponentString(componentsString string) *Path {
+func NewPathFromString(componentsString string) *Path {
 
-	newPath := new(Path)
+	newPath := NewPath()
 	newPath.SetComponentsString(componentsString)
 
 	return newPath
 }
 
-func NewSelfPath() *Path {
+func (s *Path) PathByAppendingPath(pathToAppend *Path) *Path {
 
-	newPath := new(Path)
-	newPath.isRelative = true
-
-	return newPath
-}
-
-func (s *Path) NewPathByAppendingPath(pathToAppend *Path) *Path {
-
-	p := new(Path)
+	p := NewPath()
 
 	upwardMoves := 0
-	for i := 0; i < len(pathToAppend.components); i++ {
-		if pathToAppend.components[i].IsParent() {
+	for i := 0; i < len(pathToAppend._components); i++ {
+		if pathToAppend._components[i].IsParent() {
 			upwardMoves++
 		} else {
 			break
 		}
 	}
 
-	for i := 0; i < len(s.components)-upwardMoves; i++ {
-		p.components = append(p.components, s.components[i])
+	for i := 0; i < len(s._components)-upwardMoves; i++ {
+		p._components = append(p._components, s._components[i])
 	}
 
-	for i := upwardMoves; i < len(pathToAppend.components); i++ {
-		p.components = append(p.components, pathToAppend.components[i])
+	for i := upwardMoves; i < len(pathToAppend._components); i++ {
+		p._components = append(p._components, pathToAppend._components[i])
 	}
 
 	return p
 }
 
-func (s *Path) NewPathByAppendingComponent(c *PathComponent) *Path {
+func (s *Path) PathByAppendingComponent(c *PathComponent) *Path {
 
-	p := new(Path)
-	p.components = append(p.components, s.components...)
-	p.components = append(p.components, c)
+	p := NewPath()
+	p._components = append(s._components, c)
 
 	return p
 }
 
 func (s *Path) ComponentsString() string {
 
-	if s.componentsString == "" {
-		s.componentsString = s.join(".", s.components)
-		if s.isRelative {
-			s.componentsString = "." + s.componentsString
-		}
+	//if s._componentsString == "" {
+	s._componentsString = s.join(".", s._components)
+	if s.IsRelative() {
+		s._componentsString = "." + s._componentsString
 	}
+	//}
 
-	return s.componentsString
+	return s._componentsString
 }
 
 func (s *Path) join(separator string, components []*PathComponent) string {
@@ -171,12 +141,12 @@ func (s *Path) join(separator string, components []*PathComponent) string {
 
 func (s *Path) SetComponentsString(value string) {
 
-	s.components = nil
-	s.componentsString = value
+	s._components = s._components[:0]
+	s._componentsString = value
 
 	// Empty path, empty components
 	// (path is to root, like "/" in file system)
-	if s.componentsString == "" {
+	if s._componentsString == "" {
 		return
 	}
 
@@ -184,26 +154,27 @@ func (s *Path) SetComponentsString(value string) {
 	//   .^.^.hello.5
 	// is equivalent to file system style path:
 	//  ../../hello/5
-	if s.componentsString[0] == '.' {
-		s.isRelative = true
-		s.componentsString = s.componentsString[1:]
+	if s._componentsString[0] == '.' {
+		s._isRelative = true
+		s._componentsString = s._componentsString[1:]
 	} else {
-		s.isRelative = false
+		s._isRelative = false
 	}
 
-	componentStrings := strings.Split(s.componentsString, ".")
+	componentStrings := strings.Split(s._componentsString, ".")
+
 	for _, str := range componentStrings {
-		index, err := strconv.Atoi(str)
-		if err == nil {
-			s.components = append(s.components, NewPathComponentFromIndex(index))
+
+		if index, err := strconv.Atoi(str); err == nil {
+			s._components = append(s._components, NewPathComponentFromIndex(index))
 		} else {
-			s.components = append(s.components, NewPathComponentFromName(str))
+			s._components = append(s._components, NewPathComponentFromName(str))
 		}
 	}
 }
 
 func (s *Path) String() string {
-	return s.componentsString
+	return s.ComponentsString()
 }
 
 func (s *Path) Equals(otherPath *Path) bool {
@@ -212,7 +183,7 @@ func (s *Path) Equals(otherPath *Path) bool {
 		return false
 	}
 
-	if len(otherPath.components) != len(s.components) {
+	if len(otherPath._components) != len(s._components) {
 		return false
 	}
 
@@ -220,8 +191,8 @@ func (s *Path) Equals(otherPath *Path) bool {
 		return false
 	}
 
-	for index, otherPathComponent := range otherPath.components {
-		if !otherPathComponent.Equals(s.components[index]) {
+	for i, otherPathComponent := range otherPath._components {
+		if !otherPathComponent.Equals(s._components[i]) {
 			return false
 		}
 	}
@@ -229,31 +200,25 @@ func (s *Path) Equals(otherPath *Path) bool {
 	return true
 }
 
-func (s *Path) HashCode() string {
-	return s.String()
-}
-
 type PathComponent struct {
-	index    int
-	name     string
-	isIndex  bool
-	isParent bool
+	_index int
+	_name  string
 }
 
 func (s *PathComponent) Index() int {
-	return s.index
+	return s._index
 }
 
 func (s *PathComponent) Name() string {
-	return s.name
+	return s._name
 }
 
 func (s *PathComponent) IsIndex() bool {
-	return s.index >= 0
+	return s._index >= 0
 }
 
 func (s *PathComponent) IsParent() bool {
-	return s.name == ParentID
+	return s._name == "^"
 }
 
 func NewPathComponentFromIndex(index int) *PathComponent {
@@ -264,8 +229,8 @@ func NewPathComponentFromIndex(index int) *PathComponent {
 	}
 
 	newPathComponent := new(PathComponent)
-	newPathComponent.index = index
-	newPathComponent.name = ""
+	newPathComponent._index = index
+	newPathComponent._name = ""
 
 	return newPathComponent
 }
@@ -277,23 +242,23 @@ func NewPathComponentFromName(name string) *PathComponent {
 	}
 
 	newPathComponent := new(PathComponent)
-	newPathComponent.index = -1
-	newPathComponent.name = name
+	newPathComponent._name = name
+	newPathComponent._index = -1
 
 	return newPathComponent
 }
 
 func PathComponentToParent() *PathComponent {
-	return NewPathComponentFromName(ParentID)
+	return NewPathComponentFromName("^")
 }
 
 func (s *PathComponent) String() string {
 
-	if s.isIndex {
-		return fmt.Sprint(s.index)
-	} else {
-		return s.name
+	if s.IsIndex() {
+		return fmt.Sprint(s._index)
 	}
+
+	return s._name
 }
 
 func (s *PathComponent) Equals(otherComp *PathComponent) bool {
@@ -301,19 +266,10 @@ func (s *PathComponent) Equals(otherComp *PathComponent) bool {
 	if otherComp != nil && otherComp.IsIndex() == s.IsIndex() {
 		if s.IsIndex() {
 			return s.Index() == otherComp.Index()
-		} else {
-			return s.Name() == otherComp.Name()
 		}
+
+		return s.Name() == otherComp.Name()
 	}
 
 	return false
-}
-
-func (s *PathComponent) HashCode() string {
-
-	if s.isIndex {
-		return fmt.Sprint(s.index)
-	} else {
-		return s.name
-	}
 }

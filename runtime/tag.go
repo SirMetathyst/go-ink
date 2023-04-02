@@ -23,7 +23,6 @@ func NewTag(text string) *Tag {
 
 	newTag := new(Tag)
 	newTag.text = text
-	newTag.this = newTag
 
 	return newTag
 }

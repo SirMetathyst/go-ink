@@ -7,11 +7,11 @@ import (
 )
 
 func TextToDictionary(text string) map[string]interface{} {
-	return NewReader(text).ToDictionary()
+	return NewReader(text).ToMap()
 }
 
 func TextToArray(text string) []interface{} {
-	return NewReader(text).ToArray()
+	return NewReader(text).ToSlice()
 }
 
 type Reader struct {
@@ -21,17 +21,28 @@ type Reader struct {
 }
 
 func NewReader(text string) *Reader {
+
+	ByteOrderMarkAsString := string('\uFEFF')
+
+	if strings.HasPrefix(text, ByteOrderMarkAsString) {
+
+		fmt.Printf("Found leading Byte Order Mark sequence!\n")
+
+		text = strings.TrimPrefix(text, ByteOrderMarkAsString)
+	}
+
 	r := &Reader{text: text, offset: 0}
+
 	r.skipWhitespace()
 	r.rootObject = r.readObject()
 	return r
 }
 
-func (s *Reader) ToDictionary() map[string]interface{} {
+func (s *Reader) ToMap() map[string]interface{} {
 	return s.rootObject.(map[string]interface{})
 }
 
-func (s *Reader) ToArray() []interface{} {
+func (s *Reader) ToSlice() []interface{} {
 	return s.rootObject.([]interface{})
 }
 
@@ -46,6 +57,10 @@ func IsFirstNumberChar(c uint8) bool {
 func (s *Reader) readObject() interface{} {
 
 	currentChar := s.text[s.offset]
+
+	if rune(currentChar) == '\uFEFF' {
+		fmt.Println("BOM")
+	}
 
 	if currentChar == '{' {
 		return s.ReadDictionary()
@@ -110,6 +125,9 @@ func (s *Reader) ReadDictionary() map[string]interface{} {
 		s.expectCondition(val != nil, "dictionary value")
 
 		// Add to dictionary
+		if _, ok := dict[key]; ok {
+			panic("key already in map")
+		}
 		dict[key] = val
 
 		s.skipWhitespace()

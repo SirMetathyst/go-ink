@@ -4,19 +4,16 @@ import (
 	"fmt"
 )
 
-// (default) skipLast: false
-func JArrayToRuntimeObjList[T Object](jArray []interface{}, skipLast bool) []T {
+func JArrayToRuntimeObjList[T any](jArray []interface{}, skipLast bool) []T {
 
 	count := len(jArray)
 	if skipLast {
 		count--
 	}
 
-	list := make([]T, len(jArray))
-
+	var list []T
 	for i := 0; i < count; i++ {
-		jTok := jArray[i]
-		runtimeObj, _ := JTokenToRuntimeObject(jTok).(T)
+		runtimeObj := JTokenToRuntimeObject(jArray[i]).(T)
 		list = append(list, runtimeObj)
 	}
 
@@ -63,8 +60,10 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 
 		divTypeKey := "->"
 		if divert.IsExternal {
+
 			divTypeKey = "x()"
 		} else if divert.PushesToStack {
+
 			if divert.StackPushType == Function {
 				divTypeKey = "f()"
 			} else if divert.StackPushType == Tunnel {
@@ -109,30 +108,30 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 
 	boolVal, _ := obj.(*BoolValue)
 	if boolVal != nil {
-		writer.WriteBool(boolVal.Value)
+		writer.WriteBool(boolVal.Value())
 		return
 	}
 
 	intVal, _ := obj.(*IntValue)
 	if intVal != nil {
-		writer.WriteInt(intVal.Value)
+		writer.WriteInt(intVal.Value())
 		return
 	}
 
 	floatVal, _ := obj.(*FloatValue)
 	if floatVal != nil {
-		writer.WriteFloat(floatVal.Value)
+		writer.WriteFloat(floatVal.Value())
 		return
 	}
 
 	strVal, _ := obj.(*StringValue)
 	if strVal != nil {
-		if strVal.isNewline {
+		if strVal.IsNewline() {
 			writer.WriteString("\\n", false)
 		} else {
 			writer.WriteStringStart()
 			writer.WriteStringInner("^", true)
-			writer.WriteStringInner(strVal.Value, true)
+			writer.WriteStringInner(strVal.Value(), true)
 			writer.WriteStringEnd()
 		}
 		return
@@ -147,7 +146,7 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 	divTargetVal, _ := obj.(*DivertTargetValue)
 	if divTargetVal != nil {
 		writer.WriteObjectStart()
-		writer.WriteStringProperty("^->", divTargetVal.Value.ComponentsString())
+		writer.WriteStringProperty("^->", divTargetVal.Value().ComponentsString())
 		writer.WriteObjectEnd()
 		return
 	}
@@ -155,8 +154,8 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 	varPtrVal, _ := obj.(*VariablePointerValue)
 	if varPtrVal != nil {
 		writer.WriteObjectStart()
-		writer.WriteStringProperty("^var", varPtrVal.Value)
-		writer.WriteIntProperty("ci", varPtrVal.ContextIndex)
+		writer.WriteStringProperty("^var", varPtrVal.Value())
+		writer.WriteIntProperty("ci", varPtrVal.ContextIndex())
 		writer.WriteObjectEnd()
 		return
 	}
@@ -169,33 +168,31 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 
 	controlCmd, _ := obj.(*ControlCommand)
 	if controlCmd != nil {
-		v, _ := controlCommandNames[controlCmd.commandType]
+		v, _ := controlCommandNames[controlCmd.CommandType]
 		writer.WriteString(v, true)
 		return
 	}
 
-	// Not Implemented
+	nativeFunc, _ := obj.(*NativeFunctionCall)
+	if nativeFunc != nil {
+		name := nativeFunc.Name()
 
-	//nativeFunc, _ := obj.(*NativeFunctionCall)
-	//if nativeFunc != nil {
-	//	name := nativeFunc.Name
-	//
-	//	// Avoid collision with ^ used to indicate a string
-	//	if name == "^" {
-	//		name = "L^"
-	//	}
-	//
-	//	writer.WriteString(name, true)
-	//	return
-	//}
+		// Avoid collision with ^ used to indicate a string
+		if name == "^" {
+			name = "L^"
+		}
+
+		writer.WriteString(name, true)
+		return
+	}
 
 	varRef, _ := obj.(*VariableReference)
 	if varRef != nil {
 
 		writer.WriteObjectStart()
 
-		readCountPath := varRef.PathStringForCount()
-		if readCountPath != "" {
+		readCountPath, ok := varRef.PathStringForCount()
+		if ok {
 			writer.WriteStringProperty("CNT?", readCountPath)
 		} else {
 			writer.WriteStringProperty("VAR?", varRef.Name)
@@ -215,7 +212,7 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 		writer.WriteStringProperty(key, varAss.VariableName())
 
 		// Reassignment?
-		if !varAss.isNewDeclaration {
+		if !varAss.IsNewDeclaration() {
 			writer.WriteBoolProperty("re", true)
 		}
 
@@ -249,9 +246,14 @@ func WriteRuntimeObject(writer *Writer, obj Object) {
 
 func JObjectToDictionaryRuntimeObjs(jObject map[string]interface{}) map[string]Object {
 
-	dict := make(map[string]Object, len(jObject))
+	dict := make(map[string]Object)
 
 	for k, v := range jObject {
+
+		if _, ok := dict[k]; ok {
+			panic("key already in map")
+		}
+
 		dict[k] = JTokenToRuntimeObject(v)
 	}
 
@@ -260,7 +262,7 @@ func JObjectToDictionaryRuntimeObjs(jObject map[string]interface{}) map[string]O
 
 func JObjectToIntDictionary(jObject map[string]interface{}) map[string]int {
 
-	dict := make(map[string]int, len(jObject))
+	dict := make(map[string]int, 0)
 
 	for k, v := range jObject {
 		dict[k] = v.(int)
@@ -323,6 +325,7 @@ func JTokenToRuntimeObject(token interface{}) Object {
 	_, isBool := token.(bool)
 
 	if isInt || isFloat || isBool {
+		fmt.Println("Create Value: ", token)
 		return CreateValue(token)
 	}
 
@@ -331,13 +334,16 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		// String value
 		firstChar := str[0]
 		if firstChar == '^' {
+			fmt.Println("String value", str[1:])
 			return NewStringValueFromString(str[1:])
 		} else if firstChar == '\n' && len(str) == 1 {
+			fmt.Println("String value: \\n")
 			return NewStringValueFromString("\n")
 		}
 
 		// Glue
 		if str == "<>" {
+			fmt.Println("Glue")
 			return NewGlue()
 		}
 
@@ -345,7 +351,8 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		for i := 0; i < len(controlCommandNames); i++ {
 			cmdName, _ := controlCommandNames[CommandType(i)]
 			if str == cmdName {
-				return NewControlCommandWithCommand(CommandType(i))
+				fmt.Println("CommandType: ", CommandType(i))
+				return NewControlCommand(CommandType(i))
 			}
 		}
 
@@ -355,24 +362,24 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		// symbol for the operator.
 		if str == "L^" {
 			str = "^"
-
-			// TODO: remove
-			panic("native functions not implemented")
 		}
-
-		// TODO:
-		//if( NativeFunctionCall.CallExistsWithName(str) ) {
-		//return NativeFunctionCall.CallWithName (str);
+		if CallExistsWithName(str) {
+			fmt.Println("Native Function: ", str)
+			return NewNativeFunctionCallFromName(str)
+		}
 
 		// Pop
 		if str == "->->" {
+			fmt.Println("Pop: ->->")
 			return NewPopFunctionCommand()
 		} else if str == "~ret" {
+			fmt.Println("~ret", str)
 			return NewPopFunctionCommand()
 		}
 
 		// Void
 		if str == "void" {
+			fmt.Println("Void")
 			return NewVoid()
 		}
 	}
@@ -381,47 +388,57 @@ func JTokenToRuntimeObject(token interface{}) Object {
 
 		// Divert target value to path
 		if propValue, ok := obj["^->"]; ok {
-			return NewDivertTargetValueFromPath(NewPathFromComponentString(propValue.(string)))
+			fmt.Println("Divert Target", propValue.(string))
+			return NewDivertTargetValueFromPath(NewPathFromString(propValue.(string)))
 		}
 
 		// VariablePointerValue
 		if propValue, ok := obj["^var"]; ok {
+
 			varPtr := NewVariablePointerValueFromValue(propValue.(string), -1)
-			if propValue, ok := obj["ci"]; ok {
-				varPtr.ContextIndex = propValue.(int)
+			if propValue, ok = obj["ci"]; ok {
+				varPtr.SetContextIndex(propValue.(int))
 			}
+			fmt.Println("VariablePointerValue: ", varPtr.String())
 			return varPtr
 		}
 
 		// Divert
-		var propValue interface{}
 		isDivert := false
+		var propValue interface{}
 		pushesToStack := false
 		divPushType := Function
 		external := false
+
 		if propValue, ok = obj["->"]; ok {
 			isDivert = true
 		} else if propValue, ok = obj["f()"]; ok {
+
 			isDivert = true
 			pushesToStack = true
 			divPushType = Function
+
 		} else if propValue, ok = obj["->t->"]; ok {
+
 			isDivert = true
 			pushesToStack = true
 			divPushType = Tunnel
+
 		} else if propValue, ok = obj["x()"]; ok {
 			isDivert = true
 			external = true
 			pushesToStack = false
 			divPushType = Function
 		}
+
 		if isDivert {
+
 			divert := NewDivert()
 			divert.PushesToStack = pushesToStack
 			divert.StackPushType = divPushType
 			divert.IsExternal = external
 
-			target := propValue.(fmt.Stringer).String()
+			target := propValue.(string)
 			if propValue, ok = obj["var"]; ok {
 				divert.VariableDivertName = target
 			} else {
@@ -442,21 +459,25 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		// Choice
 		if propValue, ok = obj["*"]; ok {
 			choice := NewChoicePoint()
-			choice.SetPathStringOnChoice(propValue.(fmt.Stringer).String())
+			choice.SetPathStringOnChoice(propValue.(string))
 
 			if propValue, ok = obj["flg"]; ok {
 				choice.SetFlags(propValue.(int))
 			}
 
+			fmt.Println("Choice: ", choice.String())
 			return choice
 		}
 
 		// Variable reference
 		if propValue, ok = obj["VAR?"]; ok {
-			return NewVariablePointerValueFromValue(propValue.(fmt.Stringer).String(), -1)
+			fmt.Println("Variable reference: ", propValue.(string))
+			return NewVariableReferenceFromName(propValue.(string))
 		} else if propValue, ok = obj["CNT?"]; ok {
 			readCountVarRef := NewVariableReference()
-			readCountVarRef.SetPathStringForCount(propValue.(fmt.Stringer).String())
+			readCountVarRef.SetPathStringForCount(propValue.(string))
+
+			fmt.Println("Variable reference: ", readCountVarRef.String())
 			return readCountVarRef
 		}
 
@@ -471,16 +492,19 @@ func JTokenToRuntimeObject(token interface{}) Object {
 			isGlobalVar = false
 		}
 		if isVarAss {
-			varName := propValue.(fmt.Stringer).String()
+			varName := propValue.(string)
 			_, isNewDecl := obj["re"]
 			isNewDecl = !isNewDecl
 			varAss := NewVariableAssignment(varName, isNewDecl)
 			varAss.IsGlobal = isGlobalVar
+
+			fmt.Println("Variable Assignment: ", varAss.String())
 			return varAss
 		}
 
 		// Legacy Tag with text
 		if propValue, ok = obj["#"]; ok {
+			fmt.Println("Tag: ", propValue.(string))
 			return NewTag(propValue.(string))
 		}
 
@@ -492,37 +516,42 @@ func JTokenToRuntimeObject(token interface{}) Object {
 				nameAsObjs := propValue.([]interface{})
 				var nameAsStr []string
 				for _, v := range nameAsObjs {
+					//nameAsStr.Add(v.(string))
 					nameAsStr = append(nameAsStr, v.(string))
 				}
 				rawList.SetInitialOriginNames(nameAsStr)
 				for k, v := range listContent {
 					item := NewInkListFromFullname(k)
 					val := v.(int)
-					rawList.Dict[item] = val
+					rawList.Add(item, val)
 				}
+				fmt.Println("Ink List: ", rawList)
 				return NewListValueFromList(rawList)
 			}
 		}
 
 		// Used when serialising save state only
 		if propValue, ok = obj["originalChoicePath"]; ok {
+
 			return JObjectToChoice(obj)
 		}
 	}
 
 	// Array is always a Runtime.Container
 	if obj, ok := token.([]interface{}); ok {
+
+		fmt.Println("Container: ")
 		return JArrayToContainer(obj)
 	}
 
 	if token == nil {
+		fmt.Println("Nil Token")
 		return nil
 	}
 
 	panic(fmt.Sprintf("Failed to convert token to runtime object: %v", token))
 }
 
-// (default) withoutName: false
 func WriteRuntimeContainer(writer *Writer, container *Container, withoutName bool) {
 
 	writer.WriteArrayStart()
@@ -575,7 +604,9 @@ func WriteRuntimeContainer(writer *Writer, container *Container, withoutName boo
 func JArrayToContainer(jArray []interface{}) *Container {
 
 	container := NewContainer()
-	container.SetContent(JArrayToRuntimeObjList[Object](jArray, true))
+	for _, c := range JArrayToRuntimeObjList[Object](jArray, true) {
+		container.AddContent(c)
+	}
 
 	// Final object in the array is always a combination of
 	//  - named content
@@ -584,13 +615,13 @@ func JArrayToContainer(jArray []interface{}) *Container {
 	terminatingObj, _ := jArray[len(jArray)-1].(map[string]interface{})
 	if terminatingObj != nil {
 
-		namedOnlyContent := make(map[string]Object, len(terminatingObj))
+		namedOnlyContent := make(map[string]Object)
 
 		for k, v := range terminatingObj {
 			if k == "#f" {
 				container.SetCountFlags(v.(int))
 			} else if k == "#n" {
-				container.SetName(v.(fmt.Stringer).String())
+				container.SetName(v.(string))
 			} else {
 				namedContentItem := JTokenToRuntimeObject(v)
 				namedSubContainer, _ := namedContentItem.(*Container)
@@ -616,6 +647,8 @@ func JObjectToChoice(jObj map[string]interface{}) *Choice {
 	choice.OriginalTheadIndex = jObj["originalThreadIndex"].(int)
 	choice.SetPathStringOnChoice(jObj["targetPath"].(fmt.Stringer).String())
 
+	fmt.Println("Choice: ", choice)
+
 	return choice
 }
 
@@ -631,13 +664,13 @@ func WriteChoice(writer *Writer, choice *Choice) {
 
 func WriteInkList(writer *Writer, listVal *ListValue) {
 
-	rawList := listVal.Value
+	rawList := listVal.Value()
 
 	writer.WriteObjectStart()
 	writer.WritePropertyStart("list")
 	writer.WriteObjectStart()
 
-	for item, itemVal := range rawList.Dict {
+	for item, itemVal := range rawList._items {
 
 		writer.WritePropertyNameStart()
 
@@ -658,7 +691,7 @@ func WriteInkList(writer *Writer, listVal *ListValue) {
 	writer.WriteObjectEnd()
 	writer.WritePropertyEnd()
 
-	if rawList.Length() == 0 && rawList.OriginNames() != nil && len(rawList.OriginNames()) > 0 {
+	if rawList.Count() == 0 && rawList.OriginNames() != nil && len(rawList.OriginNames()) > 0 {
 		writer.WritePropertyStart("origins")
 		writer.WriteArrayStart()
 		for _, name := range rawList.OriginNames() {
@@ -674,15 +707,24 @@ func WriteInkList(writer *Writer, listVal *ListValue) {
 func JTokenToListDefinitions(obj interface{}) *ListDefinitionsOrigin {
 
 	defsObj := obj.(map[string]interface{})
-	var allDefs []*ListDefinition
+	allDefs := []*ListDefinition{}
 
 	for name, listDefJsonInterface := range defsObj {
+
 		listDefJson := listDefJsonInterface.(map[string]interface{})
-		items := make(map[string]int, 0)
+
+		items := make(map[string]int)
 		for k, v := range listDefJson {
+
+			if _, ok := items[k]; ok {
+				panic("key already in map")
+			}
+
 			items[k] = v.(int)
 		}
+
 		def := NewListDefinition(name, items)
+		//allDefs.Add(def)
 		allDefs = append(allDefs, def)
 	}
 

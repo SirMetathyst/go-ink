@@ -1,15 +1,18 @@
 package runtime
 
 type ListDefinitionsOrigin struct {
-	lists                        map[string]*ListDefinition
-	allUnambiguousListValueCache map[string]*ListValue
+
+	// Private
+	_lists                        map[string]*ListDefinition
+	_allUnambiguousListValueCache map[string]*ListValue
 }
 
 func (s *ListDefinitionsOrigin) Lists() []*ListDefinition {
 
-	var listOfLists []*ListDefinition
-	for _, v := range s.lists {
-		listOfLists = append(listOfLists, v)
+	listOfLists := []*ListDefinition{}
+	for _, value := range s._lists {
+
+		listOfLists = append(listOfLists, value)
 	}
 
 	return listOfLists
@@ -18,20 +21,21 @@ func (s *ListDefinitionsOrigin) Lists() []*ListDefinition {
 func NewListDefinitionsOrigin(lists []*ListDefinition) *ListDefinitionsOrigin {
 
 	newListDefinitionsOrigin := new(ListDefinitionsOrigin)
-	_lists := make(map[string]*ListDefinition, 0)
-	allUnambiguousListValueCache := make(map[string]*ListValue)
+	newListDefinitionsOrigin._lists = make(map[string]*ListDefinition)
+	newListDefinitionsOrigin._allUnambiguousListValueCache = make(map[string]*ListValue)
 
 	for _, list := range lists {
 
-		_lists[list.Name()] = list
+		newListDefinitionsOrigin._lists[list.Name()] = list
 
 		for item, val := range list.Items() {
-			listValue := NewListValueFromItem(item, val)
+
+			listValue := NewListValueFromInkListItem(item, val)
 
 			// May be ambiguous, but compiler should've caught that,
 			// so we may be doing some replacement here, but that's okay.
-			allUnambiguousListValueCache[item.ItemName()] = listValue
-			allUnambiguousListValueCache[item.Fullname()] = listValue
+			newListDefinitionsOrigin._allUnambiguousListValueCache[item.ItemName()] = listValue
+			newListDefinitionsOrigin._allUnambiguousListValueCache[item.Fullname()] = listValue
 		}
 	}
 
@@ -39,12 +43,13 @@ func NewListDefinitionsOrigin(lists []*ListDefinition) *ListDefinitionsOrigin {
 }
 
 func (s *ListDefinitionsOrigin) TryListGetDefinition(name string) (*ListDefinition, bool) {
-	def, ok := s.lists[name]
-	return def, ok
+
+	v, ok := s._lists[name]
+	return v, ok
 }
 
-func (s *ListDefinitionsOrigin) FindSingleItemListName(name string) *ListValue {
+func (s *ListDefinitionsOrigin) FindSingleItemListWithName(name string) (val *ListValue) {
 
-	val, _ := s.allUnambiguousListValueCache[name]
-	return val
+	val, _ = s._allUnambiguousListValueCache[name]
+	return
 }

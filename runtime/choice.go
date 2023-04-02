@@ -30,13 +30,12 @@ func (s *Choice) PathStringOnChoice() string {
 }
 
 func (s *Choice) SetPathStringOnChoice(value string) {
-	s.TargetPath = NewPathFromComponentString(value)
+	s.TargetPath = NewPathFromString(value)
 }
 
 func NewChoice() *Choice {
 
 	newChoice := new(Choice)
-	newChoice.this = newChoice
 
 	return newChoice
 }

@@ -20,16 +20,13 @@ func (s *SearchResult) CorrectObj() Object {
 
 	if s.Approximate {
 		return nil
-	} else {
-		return s.Obj
 	}
+
+	return s.Obj
 }
 
 func (s *SearchResult) Container() *Container {
 
-	if container, ok := s.Obj.(*Container); ok {
-		return container
-	}
-
-	return nil
+	container, _ := s.Obj.(*Container)
+	return container
 }

@@ -64,7 +64,7 @@ func (s *DebugMetadata) String() string {
 
 	if s.FileName != "" {
 		return fmt.Sprintf("line %d of %s", s.StartLineNumber, s.FileName)
-	} else {
-		return fmt.Sprintf("line %d", +s.StartLineNumber)
 	}
+
+	return fmt.Sprintf("line %d", +s.StartLineNumber)
 }

@@ -14,125 +14,119 @@ import (
 type InkListItem struct {
 
 	// Private
-	originName string
-	itemName   string
+	_originName string
+	_itemName   string
 }
 
 // OriginName
 // The name of the list where the item was originally defined.
-func (s *InkListItem) OriginName() string {
-	return s.originName
+func (s InkListItem) OriginName() string {
+	return s._originName
 }
 
 // ItemName
 // The main name of the item as defined in ink.
-func (s *InkListItem) ItemName() string {
-	return s.itemName
+func (s InkListItem) ItemName() string {
+	return s._itemName
 }
 
 // NewInkListItem
 // Create an item with the given original list definition name, and the name of this item.
-func NewInkListItem(originName string, itemName string) *InkListItem {
+func NewInkListItem(originName string, itemName string) InkListItem {
 
-	inkListItem := new(InkListItem)
-	inkListItem.originName = originName
-	inkListItem.itemName = itemName
+	inkListItem := InkListItem{}
+	inkListItem._originName = originName
+	inkListItem._itemName = itemName
 
 	return inkListItem
 }
 
 // NewInkListFromFullname
 // Create an item from a dot-separted string of the form "listDefinitionName.listItemName".
-func NewInkListFromFullname(fullName string) *InkListItem {
+func NewInkListFromFullname(fullName string) InkListItem {
 
-	inkListItem := new(InkListItem)
+	inkListItem := InkListItem{}
 	nameParts := strings.Split(fullName, ".")
-	inkListItem.originName = nameParts[0]
-	inkListItem.itemName = nameParts[1]
+	inkListItem._originName = nameParts[0]
+	inkListItem._itemName = nameParts[1]
 
 	return inkListItem
 }
 
-func NullInkListItem() *InkListItem {
-	return NewInkListItem("", "")
-}
+func (s InkListItem) IsNull() bool {
 
-func (s *InkListItem) IsNull() bool {
-
-	return s.originName == "" && s.itemName == ""
+	return s._originName == "" && s._itemName == ""
 }
 
 // Fullname
 // Get the full dot-separated name of the item, in the form "listDefinitionName.itemName".
-func (s *InkListItem) Fullname() string {
+func (s InkListItem) Fullname() string {
 
-	v := ""
-	if s.originName == "" {
+	v := s.OriginName()
+	if v == "" {
 		v = "?"
-	} else {
-		v = s.originName
 	}
 
-	return v + "." + s.itemName
-}
-
-// String
-// Get the full dot-separated name of the item, in the form "listDefinitionName.itemName".
-// Calls fullName internally.
-func (s *InkListItem) String() string {
-
-	return s.Fullname()
-}
-
-func (s *InkListItem) Equals(otherInkListItem *InkListItem) bool {
-
-	return otherInkListItem.ItemName() == s.ItemName() && otherInkListItem.OriginName() == s.OriginName()
-}
-
-func (s *InkListItem) HashCode() string {
-	return fmt.Sprintf("%s-%s", s.originName, s.itemName)
+	return v + "." + s.ItemName()
 }
 
 type InkList struct {
+	//Dictionary[InkListItem, int]
+
+	_items map[InkListItem]int
 
 	// Private
-	originNames []string
+	_originNames []string
 
 	// Public
-	Dict    map[*InkListItem]int
 	Origins []*ListDefinition
+}
+
+func (s *InkList) Count() int {
+	return len(s._items)
+}
+
+func (s *InkList) Set(key InkListItem, value int) {
+	s._items[key] = value
+}
+
+func (s *InkList) Remove(key InkListItem) {
+	delete(s._items, key)
+}
+
+func (s *InkList) ContainsKey(key InkListItem) bool {
+	_, ok := s._items[key]
+	return ok
+}
+
+func (s *InkList) Add(key InkListItem, value int) {
+	if _, ok := s._items[key]; ok == false {
+		s._items[key] = value
+	} else {
+		panic("An item with the same key has already been added. Key: " + fmt.Sprint(key))
+	}
 }
 
 func NewInkList() *InkList {
 
 	newInkList := new(InkList)
-	newInkList.Dict = make(map[*InkListItem]int)
 
 	return newInkList
 }
 
-func (s *InkList) Length() int {
-	return len(s.Dict)
-}
-
-// NewInkListFromList
+// NewInkListFromInkList
 // Create a new ink list that contains the same contents as another list.
-func NewInkListFromList(otherList *InkList) *InkList {
+func NewInkListFromInkList(otherList *InkList) *InkList {
 
-	newInkList := new(InkList)
-	newInkList.Dict = make(map[*InkListItem]int)
-
-	for k, v := range otherList.Dict {
-		newInkList.Dict[k] = v
-	}
+	newInkList := NewInkList()
 
 	otherOriginNames := otherList.OriginNames()
 	if otherOriginNames != nil {
-		newInkList.originNames = append([]string{}, otherList.originNames...)
+		newInkList._originNames = NewSliceFromSlice(otherOriginNames)
 	}
 
 	if otherList.Origins != nil {
-		newInkList.Origins = append([]*ListDefinition{}, otherList.Origins...)
+		newInkList.Origins = NewSliceFromSlice(otherList.Origins)
 	}
 
 	return newInkList
@@ -143,118 +137,38 @@ func NewInkListFromList(otherList *InkList) *InkList {
 // list definition. The origin Story is needed in order to be able to look up that definition.
 func NewInkListFromOriginStory(singleOriginListName string, originStory *Story) *InkList {
 
-	newInkList := new(InkList)
-	newInkList.Dict = make(map[*InkListItem]int)
+	newInkList := NewInkList()
 	newInkList.SetInitialOriginName(singleOriginListName)
 
 	if def, ok := originStory.ListDefinitions().TryListGetDefinition(singleOriginListName); ok {
-		newInkList.Origins = append([]*ListDefinition{}, def)
-	} else {
-		panic("InkList origin could not be found in story when constructing new list: " + singleOriginListName)
+
+		newInkList.Origins = []*ListDefinition{def}
+		return newInkList
 	}
+
+	panic("InkList origin could not be found in story when constructing new list: " + singleOriginListName)
+}
+
+func NewInkListFromSingleElement(singleElement KeyValuePair[InkListItem, int]) *InkList {
+
+	newInkList := NewInkList()
+	newInkList.Add(singleElement.Key, singleElement.Value)
 
 	return newInkList
-}
-
-func NewInkListFromListItem(listItem *InkListItem, val int) *InkList {
-
-	newInkList := new(InkList)
-	newInkList.Dict = make(map[*InkListItem]int)
-	newInkList.Dict[listItem] = val
-
-	return newInkList
-}
-
-// NewInkListFromString
-// Converts a string to an ink list and returns for use in the story.
-func NewInkListFromString(myListItem string, originStory *Story) *InkList {
-	listValue := originStory.ListDefinitions().FindSingleItemListWithName(myListItem)
-	if listValue != nil {
-		return NewInkListFromList(listValue)
-	} else {
-		panic("Could not find the InkListItem from the string '" + myListItem + "' to create an InkList because it doesn't exist in the original list definition in ink.")
-	}
-}
-
-// AddItem
-// Adds the given item to the ink list. Note that the item must come from a list definition that
-// is already "known" to this list, so that the item's value can be looked up. By "known", we mean
-// that it already has items in it from that source, or it did at one point - it can't be a
-// completely fresh empty list, or a list that only contains items from a different list definition.
-func (s *InkList) AddItem(item *InkListItem) {
-
-	if item.OriginName() == "" {
-		s.AddItemName(item.ItemName())
-		return
-	}
-
-	for _, origin := range s.Origins {
-
-		if origin.Name() == item.OriginName() {
-			if intVal, ok := origin.TryGetValueForItem(item); ok {
-				s.Dict[item] = intVal
-				return
-			} else {
-				panic("Could not add the item " + item.String() + " to this list because it doesn't exist in the original list definition in ink.")
-			}
-		}
-	}
-
-	panic("Failed to add item to list because the item was from a new list definition that wasn't previously known to this list. Only items from previously known lists can be used, so that the int value can be found.")
-}
-
-// AddItemName
-// Adds the given item to the ink list, attempting to find the origin list definition that it belongs to.
-// The item must therefore come from a list definition that is already "known" to this list, so that the
-// item's value can be looked up. By "known", we mean that it already has items in it from that source, or
-// it did at one point - it can't be a completely fresh empty list, or a list that only contains items from
-// a different list definition.
-func (s *InkList) AddItemName(itemName string) {
-
-	var foundListDef *ListDefinition
-
-	for _, origin := range s.Origins {
-		if origin.ContainsItemWithName(itemName) {
-			if foundListDef != nil {
-				panic("Could not add the item " + itemName + " to this list because it could come from either " + origin.name + " or " + foundListDef.name)
-			} else {
-				foundListDef = origin
-			}
-		}
-	}
-
-	if foundListDef == nil {
-		panic("Could not add the item " + itemName + " to this list because it isn't known to any list definitions previously associated with this list.")
-	}
-
-	item := NewInkListItem(foundListDef.Name(), itemName)
-	itemVal := foundListDef.ValueForItem(item)
-	s.Dict[item] = itemVal
-}
-
-// ContainsItemNamed
-// Returns true if this ink list contains an item with the given short name
-// (ignoring the original list where it was defined).
-func (s *InkList) ContainsItemNamed(itemName string) bool {
-
-	for k, _ := range s.Dict {
-		if k.ItemName() == itemName {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (s *InkList) OriginOfMaxItem() *ListDefinition {
 
 	if s.Origins == nil {
+
 		return nil
 	}
 
-	maxOrigin, _ := s.MaxItem()
+	maxOriginName := s.MaxItem().Key.OriginName()
 	for _, origin := range s.Origins {
-		if origin.Name() == maxOrigin.OriginName() {
+
+		if origin.Name() == maxOriginName {
+
 			return origin
 		}
 	}
@@ -268,77 +182,90 @@ func (s *InkList) OriginOfMaxItem() *ListDefinition {
 // that is currently empty.
 func (s *InkList) OriginNames() []string {
 
-	if s.Length() > 0 {
-		if s.originNames == nil && s.Length() > 0 {
-			s.originNames = nil
+	if s.Count() > 0 {
+
+		if s._originNames == nil && s.Count() > 0 {
+
+			s._originNames = []string{}
 		} else {
-			s.originNames = nil
+
+			s._originNames = s._originNames[:0]
 		}
 
-		for k, _ := range s.Dict {
-			s.originNames = append(s.originNames, k.OriginName())
+		for item, _ := range s._items {
+			s._originNames = append(s._originNames, item.OriginName())
 		}
 	}
 
-	return s.originNames
+	return s._originNames
 }
 
 func (s *InkList) SetInitialOriginName(initialOriginName string) {
-	s.originNames = append([]string{}, initialOriginName)
+
+	s._originNames = []string{initialOriginName}
 }
 
 func (s *InkList) SetInitialOriginNames(initialOriginNames []string) {
 
 	if initialOriginNames == nil {
-		s.originNames = nil
-	} else {
-		s.originNames = append([]string{}, initialOriginNames...)
+
+		s._originNames = nil
+		return
 	}
+
+	s._originNames = initialOriginNames
 }
 
 // MaxItem
 // Get the maximum item in the list, equivalent to calling LIST_MAX(list) in ink.
-func (s *InkList) MaxItem() (*InkListItem, int) {
+func (s *InkList) MaxItem() KeyValuePair[InkListItem, int] {
 
-	newListItem := NewInkListItem("", "")
-	newListValue := 0
+	max := KeyValuePair[InkListItem, int]{}
 
-	for k, v := range s.Dict {
-		if newListItem.IsNull() || v > newListValue {
-			newListItem = k
-			newListValue = v
+	for key, value := range s._items {
+
+		if max.Key.IsNull() || value > max.Value {
+
+			max.Key = key
+			max.Value = value
 		}
 	}
 
-	return newListItem, newListValue
+	return max
 }
 
 // MinItem
 // Get the minimum item in the list, equivalent to calling LIST_MIN(list) in ink.
-func (s *InkList) MinItem() (*InkListItem, int) {
+func (s *InkList) MinItem() KeyValuePair[InkListItem, int] {
 
-	newListItem := NewInkListItem("", "")
-	newListValue := 0
+	min := KeyValuePair[InkListItem, int]{}
 
-	for k, v := range s.Dict {
-		if newListItem.IsNull() || v < newListValue {
-			newListItem = k
-			newListValue = v
+	for key, value := range s._items {
+
+		if min.Key.IsNull() || value < min.Value {
+
+			min.Key = key
+			min.Value = value
 		}
 	}
 
-	return newListItem, newListValue
+	return min
 }
 
 // Inverse
 // The inverse of the list, equivalent to calling LIST_INVERSE(list) in ink
 func (s *InkList) Inverse() *InkList {
+
 	list := NewInkList()
+
 	if s.Origins != nil {
+
 		for _, origin := range s.Origins {
-			for k, v := range origin.Items() {
-				if _, ok := s.Dict[k]; !ok {
-					list.Dict[k] = v
+
+			for key, value := range origin.Items() {
+
+				if s.ContainsKey(key) == false {
+					list.Add(key, value)
 				}
 			}
 		}
@@ -352,10 +279,14 @@ func (s *InkList) Inverse() *InkList {
 func (s *InkList) All() *InkList {
 
 	list := NewInkList()
+
 	if s.Origins != nil {
+
 		for _, origin := range s.Origins {
-			for k, v := range origin.Items() {
-				list.Dict[k] = v
+
+			for key, value := range origin.Items() {
+
+				list.Set(key, value)
 			}
 		}
 	}
@@ -366,10 +297,14 @@ func (s *InkList) All() *InkList {
 // Returns a new list that is the combination of the current list and one that's
 // passed in. Equivalent to calling (list1 + list2) in ink.
 func (s *InkList) Union(otherList *InkList) *InkList {
-	union := NewInkListFromList(s)
-	for k, v := range otherList.Dict {
-		union.Dict[k] = v
+
+	union := NewInkListFromInkList(s)
+
+	for key, value := range otherList._items {
+
+		union.Set(key, value)
 	}
+
 	return union
 }
 
@@ -378,26 +313,17 @@ func (s *InkList) Union(otherList *InkList) *InkList {
 // list that's passed in - i.e. a list of the items that are shared between the
 // two other lists. Equivalent to calling (list1 ^ list2) in ink.
 func (s *InkList) Intersect(otherList *InkList) *InkList {
+
 	intersection := NewInkList()
-	for k, v := range s.Dict {
-		if _, ok := otherList.Dict[k]; ok {
-			intersection.Dict[k] = v
+	for key, value := range s._items {
+
+		if otherList.ContainsKey(key) {
+
+			intersection.Add(key, value)
 		}
 	}
+
 	return intersection
-}
-
-// HasIntersection
-// Fast test for the existence of any intersection between the current list and another
-func (s *InkList) HasIntersection(otherList *InkList) bool {
-
-	for k, _ := range s.Dict {
-		if _, ok := otherList.Dict[k]; !ok {
-			return false
-		}
-	}
-
-	return true
 }
 
 // Without
@@ -405,10 +331,13 @@ func (s *InkList) HasIntersection(otherList *InkList) bool {
 // removed that are in the passed in list. Equivalent to calling (list1 - list2) in ink.
 func (s *InkList) Without(listToRemove *InkList) *InkList {
 
-	result := NewInkListFromList(s)
-	for k, _ := range listToRemove.Dict {
-		delete(result.Dict, k)
+	result := NewInkListFromInkList(s)
+
+	for key, _ := range listToRemove._items {
+
+		result.Remove(key)
 	}
+
 	return result
 }
 
@@ -417,45 +346,35 @@ func (s *InkList) Without(listToRemove *InkList) *InkList {
 // is passed in. Equivalent to calling (list1 ? list2) in ink.
 func (s *InkList) Contains(otherList *InkList) bool {
 
-	if otherList.Length() == 0 || s.Length() == 0 {
+	if otherList.Count() == 0 || s.Count() == 0 {
 		return false
 	}
-	for k, _ := range otherList.Dict {
-		if _, ok := s.Dict[k]; !ok {
+
+	for key, _ := range otherList._items {
+
+		if s.ContainsKey(key) == false {
 			return false
 		}
 	}
+
 	return true
-}
-
-// ContainsItemName
-// Returns true if the current list contains an item matching the given name.
-func (s *InkList) ContainsItemName(listItemName string) bool {
-
-	for k, _ := range s.Dict {
-		if k.ItemName() == listItemName {
-			return true
-		}
-	}
-
-	return false
 }
 
 // GreaterThan
 // Returns true if all the item values in the current list are greater than all the
 // item values in the passed in list. Equivalent to calling (list1 > list2) in ink.
 func (s *InkList) GreaterThan(otherList *InkList) bool {
-	if s.Length() == 0 {
+
+	if s.Count() == 0 {
 		return false
 	}
-	if otherList.Length() == 0 {
+
+	if otherList.Count() == 0 {
+
 		return true
 	}
 
-	_, value := s.MinItem()
-	_, otherValue := otherList.MaxItem()
-
-	return value > otherValue
+	return s.MinItem().Value > otherList.MaxItem().Value
 }
 
 // GreaterThanOrEquals
@@ -465,19 +384,16 @@ func (s *InkList) GreaterThan(otherList *InkList) bool {
 // or LIST_MIN(list1) >= LIST_MIN(list2) &amp;&amp; LIST_MAX(list1) >= LIST_MAX(list2).
 func (s *InkList) GreaterThanOrEquals(otherList *InkList) bool {
 
-	if s.Length() == 0 {
+	if s.Count() == 0 {
 		return false
 	}
-	if otherList.Length() == 0 {
+
+	if otherList.Count() == 0 {
 		return true
 	}
 
-	_, valueMin := s.MinItem()
-	_, otherValueMin := otherList.MinItem()
-	_, valueMax := s.MaxItem()
-	_, otherValueMax := otherList.MaxItem()
-
-	return valueMin >= otherValueMin && valueMax >= otherValueMax
+	return s.MinItem().Value >= otherList.MinItem().Value &&
+		s.MaxItem().Value >= otherList.MaxItem().Value
 }
 
 // LessThan
@@ -485,17 +401,15 @@ func (s *InkList) GreaterThanOrEquals(otherList *InkList) bool {
 // item values in the passed in list. Equivalent to calling (list1 &lt; list2) in ink.
 func (s *InkList) LessThan(otherList *InkList) bool {
 
-	if otherList.Length() == 0 {
+	if otherList.Count() == 0 {
 		return false
 	}
-	if s.Length() == 0 {
+
+	if s.Count() == 0 {
 		return true
 	}
 
-	_, valueMax := s.MaxItem()
-	_, otherValueMin := otherList.MinItem()
-
-	return valueMax < otherValueMin
+	return s.MaxItem().Value < otherList.MinItem().Value
 }
 
 // LessThanOrEquals
@@ -505,29 +419,36 @@ func (s *InkList) LessThan(otherList *InkList) bool {
 // or LIST_MAX(list1) &lt;= LIST_MAX(list2) &amp;&amp; LIST_MIN(list1) &lt;= LIST_MIN(list2).
 func (s *InkList) LessThanOrEquals(otherList *InkList) bool {
 
-	if otherList.Length() == 0 {
+	if otherList.Count() == 0 {
 		return false
 	}
-	if s.Length() == 0 {
+
+	if s.Count() == 0 {
 		return true
 	}
 
-	_, valueMin := s.MinItem()
-	_, otherValueMin := otherList.MinItem()
-	_, valueMax := s.MaxItem()
-	_, otherValueMax := otherList.MaxItem()
-
-	return valueMax <= otherValueMax && valueMin <= otherValueMin
+	return s.MaxItem().Value <= otherList.MaxItem().Value &&
+		s.MinItem().Value <= otherList.MinItem().Value
 }
 
 func (s *InkList) MaxAsList() *InkList {
 
-	if s.Length() > 0 {
-		k, v := s.MaxItem()
-		return NewInkListFromListItem(k, v)
-	} else {
-		return NewInkList()
+	if s.Count() > 0 {
+
+		return NewInkListFromSingleElement(s.MaxItem())
 	}
+
+	return NewInkList()
+}
+
+func (s *InkList) MinAsList() *InkList {
+
+	if s.Count() > 0 {
+
+		return NewInkListFromSingleElement(s.MinItem())
+	}
+
+	return NewInkList()
 }
 
 // ListWithSubRange
@@ -539,29 +460,33 @@ func (s *InkList) MaxAsList() *InkList {
 // WARNING: Calling this method requires a full sort of all the elements in the list.
 func (s *InkList) ListWithSubRange(minBound interface{}, maxBound interface{}) *InkList {
 
-	if s.Length() == 0 {
+	if s.Count() == 0 {
+
 		return NewInkList()
 	}
 
 	ordered := s.OrderedItems()
+
 	minValue := 0
 	maxValue := math.MaxInt32
 
-	if v, ok := minBound.(int); ok {
+	if v, isInt := minBound.(int); isInt {
+
 		minValue = v
 	} else {
 
-		if v, ok := minBound.(*InkList); ok && v.Length() > 0 {
-			_, minValue = v.MinItem()
+		if v, isInkList := minBound.(*InkList); isInkList && v.Count() > 0 {
+			minValue = v.MinItem().Value
 		}
 	}
 
-	if v, ok := maxBound.(int); ok {
+	if v, isInt := maxBound.(int); isInt {
+
 		maxValue = v
 	} else {
 
-		if v, ok := minBound.(*InkList); ok && v.Length() > 0 {
-			_, maxValue = v.MaxItem()
+		if v, isInkList := minBound.(*InkList); isInkList && v.Count() > 0 {
+			maxValue = v.MaxItem().Value
 		}
 	}
 
@@ -569,69 +494,68 @@ func (s *InkList) ListWithSubRange(minBound interface{}, maxBound interface{}) *
 	subList.SetInitialOriginNames(s.OriginNames())
 
 	for _, item := range ordered {
+
 		if item.Value >= minValue && item.Value <= maxValue {
-			subList.Dict[item.Key] = item.Value
+
+			subList.Add(item.Key, item.Value)
 		}
 	}
 
 	return subList
 }
 
-// Equals
-// Returns true if the passed object is also an ink list that contains
-// the same items as the current list, false otherwise.
-func (s *InkList) Equals(otherList *InkList) bool {
+func (s *InkList) OrderedItems() []KeyValuePair[InkListItem, int] {
 
-	if otherList == nil {
+	ordered := []KeyValuePair[InkListItem, int]{}
+	for key, value := range s._items {
+		ordered = append(ordered, KeyValuePair[InkListItem, int]{key, value})
+	}
+
+	sort.Slice(ordered, func(i, j int) bool {
+
+		if ordered[i].Key.OriginName() == ordered[j].Key.OriginName() {
+			return ordered[i].Key.OriginName() < ordered[j].Key.OriginName()
+		}
+
+		return ordered[i].Value < ordered[j].Value
+	})
+
+	return ordered
+}
+
+/*
+   public override bool Equals (object other)
+     {
+         var otherRawList = other as InkList;
+         if (otherRawList == null) return false;
+         if (otherRawList.Count != Count) return false;
+
+         foreach (var kv in this) {
+             if (!otherRawList.ContainsKey (kv.Key))
+                 return false;
+         }
+
+         return true;
+     }
+*/
+
+func (s *InkList) Equals(other *InkList) bool {
+
+	if other == nil {
 		return false
 	}
 
-	if otherList.Length() != s.Length() {
+	if other.Count() != s.Count() {
 		return false
 	}
 
-	for k, _ := range s.Dict {
-		if _, ok := otherList.Dict[k]; !ok {
+	for key := range s._items {
+		if other.ContainsKey(key) == false {
 			return false
 		}
 	}
 
 	return true
-}
-
-// HashCode
-// Return the hashcode for this object,
-// used for comparisons and inserting into dictionaries.
-func (s *InkList) HashCode() string {
-
-	var sb strings.Builder
-
-	for k, _ := range s.Dict {
-		sb.WriteString(">>")
-		sb.WriteString(k.HashCode())
-		sb.WriteString("<<")
-	}
-
-	return sb.String()
-}
-
-type InkListItemPair struct {
-	Key   *InkListItem
-	Value int
-}
-
-func (s *InkList) OrderedItems() []InkListItemPair {
-
-	var ordered []InkListItemPair
-	for k, v := range s.Dict {
-		ordered = append(ordered, InkListItemPair{Key: k, Value: v})
-	}
-
-	sort.Slice(ordered, func(i, j int) bool {
-		return ordered[i].Value < ordered[j].Value
-	})
-
-	return ordered
 }
 
 // String

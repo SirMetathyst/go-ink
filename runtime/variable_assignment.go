@@ -2,29 +2,32 @@ package runtime
 
 type VariableAssignment struct {
 	ObjectImpl
-	variableName     string
-	isNewDeclaration bool
-	IsGlobal         bool
+
+	// Private
+	_variableName     string
+	_isNewDeclaration bool
+
+	// Public
+	IsGlobal bool
 }
 
 func (s *VariableAssignment) VariableName() string {
-	return s.variableName
+	return s._variableName
 }
 
 func (s *VariableAssignment) IsNewDeclaration() bool {
-	return s.isNewDeclaration
+	return s._isNewDeclaration
 }
 
 func NewVariableAssignment(variableName string, isNewDeclaration bool) *VariableAssignment {
 
 	newVariableAssignment := new(VariableAssignment)
-	newVariableAssignment.variableName = variableName
-	newVariableAssignment.isNewDeclaration = isNewDeclaration
-	newVariableAssignment.this = newVariableAssignment
+	newVariableAssignment._variableName = variableName
+	newVariableAssignment._isNewDeclaration = isNewDeclaration
 
 	return newVariableAssignment
 }
 
 func (s *VariableAssignment) String() string {
-	return "VarAssign to " + s.variableName
+	return "VarAssign to " + s._variableName
 }

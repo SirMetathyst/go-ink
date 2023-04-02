@@ -7,8 +7,6 @@ type Glue struct {
 func NewGlue() *Glue {
 
 	newGlue := new(Glue)
-	newGlue.this = newGlue
-
 	return newGlue
 }
 

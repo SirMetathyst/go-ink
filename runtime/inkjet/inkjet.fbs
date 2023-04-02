@@ -1,0 +1,21 @@
+enum OpCode:byte {
+    NOP = 0,
+    TXT = 1,
+    JMP = 2,
+    HLT = 3
+}
+
+table Instruction {
+  op:OpCode;
+  oprand1:int; // This data type can change based on OpCode: int,float,string,byte etc
+  oprand2:string; // This data type can change based on OpCode: int,float,string,byte etc. This type may or may not exist based on OpCode.
+  // Instruction may or may not have additional oprands
+}
+
+table Program {
+  version:int;
+  instructions:[Instruction];
+}
+
+
+root_type Program;

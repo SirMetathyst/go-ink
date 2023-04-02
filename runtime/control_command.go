@@ -39,34 +39,24 @@ const (
 type ControlCommand struct {
 	ObjectImpl
 
-	// Private
-	commandType CommandType
+	// Public
+	CommandType CommandType
 }
 
-func NewControlCommandWithCommand(commandType CommandType) *ControlCommand {
+func NewControlCommand(commandType CommandType) *ControlCommand {
 
 	newControlCommand := new(ControlCommand)
-	newControlCommand.this = newControlCommand
-	newControlCommand.commandType = commandType
-
-	return newControlCommand
-}
-
-func NewControlCommand() *ControlCommand {
-
-	newControlCommand := new(ControlCommand)
-	newControlCommand.this = newControlCommand
-	newControlCommand.commandType = CommandTypeNotSet
+	newControlCommand.CommandType = commandType
 
 	return newControlCommand
 }
 
 func (s *ControlCommand) Copy() Object {
-	return NewControlCommandWithCommand(s.commandType)
+	return NewControlCommand(s.CommandType)
 }
 
 func (s *ControlCommand) String() string {
-	return fmt.Sprint(s.commandType)
+	return fmt.Sprint(s.CommandType)
 }
 
 // The following static factory methods are to make generating these objects
@@ -79,105 +69,105 @@ func (s *ControlCommand) String() string {
 //     var c = Runtime.ControlCommand.EvalStart()
 
 func NewEvalStartCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEvalStart)
+	return NewControlCommand(CommandTypeEvalStart)
 }
 
 func NewEvalOutputCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEvalOutput)
+	return NewControlCommand(CommandTypeEvalOutput)
 }
 
 func NewEvalEndCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEvalEnd)
+	return NewControlCommand(CommandTypeEvalEnd)
 }
 
 func NewDuplicateCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeDuplicate)
+	return NewControlCommand(CommandTypeDuplicate)
 }
 
 func NewPopEvaluatedValueCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypePopEvaluatedValue)
+	return NewControlCommand(CommandTypePopEvaluatedValue)
 }
 
 func NewPopFunctionCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypePopFunction)
+	return NewControlCommand(CommandTypePopFunction)
 }
 
 func NewPopTunnelCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypePopTunnel)
+	return NewControlCommand(CommandTypePopTunnel)
 }
 
 func NewBeginStringCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeBeginString)
+	return NewControlCommand(CommandTypeBeginString)
 }
 
 func NewEndStringCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEndString)
+	return NewControlCommand(CommandTypeEndString)
 }
 
 func NewNoOpCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeNoOp)
+	return NewControlCommand(CommandTypeNoOp)
 }
 
 func NewChoiceCountCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeChoiceCount)
+	return NewControlCommand(CommandTypeChoiceCount)
 }
 
 func NewTurnsCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeTurns)
+	return NewControlCommand(CommandTypeTurns)
 }
 
 func NewTurnsSinceCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeTurnsSince)
+	return NewControlCommand(CommandTypeTurnsSince)
 }
 
 func NewReadCountCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeReadCount)
+	return NewControlCommand(CommandTypeReadCount)
 }
 
 func NewRandomCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeRandom)
+	return NewControlCommand(CommandTypeRandom)
 }
 
 func NewSeedRandomCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeSeedRandom)
+	return NewControlCommand(CommandTypeSeedRandom)
 }
 
 func NewVisitIndexCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeVisitIndex)
+	return NewControlCommand(CommandTypeVisitIndex)
 }
 
 func NewSequenceShuffleIndexCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeSequenceShuffleIndex)
+	return NewControlCommand(CommandTypeSequenceShuffleIndex)
 }
 
 func NewStartThreadCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeStartThread)
+	return NewControlCommand(CommandTypeStartThread)
 }
 
 func NewDoneCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeDone)
+	return NewControlCommand(CommandTypeDone)
 }
 
 func NewEndCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEnd)
+	return NewControlCommand(CommandTypeEnd)
 }
 
 func NewListFromIntCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeListFromInt)
+	return NewControlCommand(CommandTypeListFromInt)
 }
 
 func NewListRangeCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeListRange)
+	return NewControlCommand(CommandTypeListRange)
 }
 
 func NewListRandomCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeListRandom)
+	return NewControlCommand(CommandTypeListRandom)
 }
 
 func NewBeginTagCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeBeginTag)
+	return NewControlCommand(CommandTypeBeginTag)
 }
 
 func NewEndTagCommand() *ControlCommand {
-	return NewControlCommandWithCommand(CommandTypeEndTag)
+	return NewControlCommand(CommandTypeEndTag)
 }

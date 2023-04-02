@@ -7,7 +7,6 @@ type Void struct {
 func NewVoid() *Void {
 
 	newVoid := new(Void)
-	newVoid.this = newVoid
 
 	return newVoid
 }
