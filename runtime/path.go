@@ -104,7 +104,7 @@ func (s *Path) PathByAppendingPath(pathToAppend *Path) *Path {
 func (s *Path) PathByAppendingComponent(c *PathComponent) *Path {
 
 	p := NewPath()
-	p._components = append(s._components, c)
+	p._components = append([]*PathComponent{}, c)
 
 	return p
 }
@@ -128,7 +128,7 @@ func (s *Path) join(separator string, components []*PathComponent) string {
 	isFirst := true
 	for _, component := range components {
 
-		if !isFirst {
+		if isFirst == false {
 			sb.WriteString(separator)
 		}
 

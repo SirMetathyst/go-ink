@@ -5,156 +5,12 @@ import (
 	"strings"
 )
 
-type Element struct {
-
-	// Private
-	_pushPopType PushPopType
-
-	// Public
-	CurrentPointer         Pointer
-	InExpressionEvaluation bool
-	TemporaryVariables     map[string]Object
-
-	// When this callstack element is actually a function evaluation called from the game,
-	// we need to keep track of the size of the evaluation stack when it was called
-	// so that we know whether there was any return value.
-	EvaluationStackHeightWhenPushed int
-
-	// When functions are called, we trim whitespace from the start and end of what
-	// they generate, so we make sure know where the function's start and end are.
-	FunctionStartInOutputStream int
-}
-
-func (s *Element) PushPopType() PushPopType {
-
-	return s._pushPopType
-}
-
-func NewElement(newPushPopType PushPopType, newPointer Pointer, newInExpressionEvaluation bool) *Element {
-
-	newElement := new(Element)
-	newElement.CurrentPointer = newPointer
-	newElement.InExpressionEvaluation = newInExpressionEvaluation
-	newElement.TemporaryVariables = make(map[string]Object, 0)
-	newElement._pushPopType = newPushPopType
-
-	return newElement
-}
-
-func (s *Element) Copy() *Element {
-
-	elementCopy := NewElement(s.PushPopType(), s.CurrentPointer, s.InExpressionEvaluation)
-	elementCopy.TemporaryVariables = NewMapFromMap(s.TemporaryVariables)
-	elementCopy.EvaluationStackHeightWhenPushed = s.EvaluationStackHeightWhenPushed
-	elementCopy.FunctionStartInOutputStream = s.FunctionStartInOutputStream
-
-	return elementCopy
-}
-
-type Thread struct {
-	// Private
-	_callStack []*Element
-
-	// Public
-	ThreadIndex     int
-	PreviousPointer Pointer
-}
-
-func (s *Thread) CallStack() []*Element {
-
-	return s._callStack
-}
-
-func (s *Thread) CallStackAdd(value *Element) {
-	s._callStack = append(s._callStack, value)
-}
-
-func (s *Thread) CallStackRemoveLast() {
-	s._callStack = s._callStack[:len(s._callStack)-1]
-}
-
-func NewThread() *Thread {
-
-	newThread := new(Thread)
-	newThread._callStack = []*Element{}
-
-	return newThread
-}
-
-func NewThreadFromJObject(jThreadObj map[string]interface{}, storyContext *Story) *Thread {
-
-	newThread := new(Thread)
-	newThread.ThreadIndex = jThreadObj["threadIndex"].(int)
-	jThreadCallstack := jThreadObj["callstack"].([]interface{})
-
-	for _, jElTok := range jThreadCallstack {
-
-		jElementObj := jElTok.(map[string]interface{})
-		pushPopType := PushPopType(jElementObj["type"].(int))
-		pointer := NullPointer
-
-		if currentContainerPathStrToken, ok := jElementObj["cPath"]; ok {
-
-			currentContainerPathStr := currentContainerPathStrToken.(fmt.Stringer).String()
-			threadPointerResult := storyContext.ContentAtPath(NewPathFromString(currentContainerPathStr))
-			pointer.Container = threadPointerResult.Container()
-			pointer.Index = jElementObj["idx"].(int)
-
-			if threadPointerResult.Obj == nil {
-				panic("When loading state, internal story location couldn't be found: " + currentContainerPathStr + ". Has the story changed since this save data was created?")
-			}
-
-			if threadPointerResult.Approximate {
-				storyContext.Warning("When loading state, exact internal story location couldn't be found: '" + currentContainerPathStr + "', so it was approximated to '" + pointer.Container.Path(pointer.Container).String() + "' to recover. Has the story changed since this save data was created?")
-			}
-		}
-
-		inExpressionEvaluation := jElementObj["exp"].(bool)
-		el := NewElement(pushPopType, pointer, inExpressionEvaluation)
-
-		if temps, ok := jElementObj["temp"]; ok {
-			el.TemporaryVariables = JObjectToDictionaryRuntimeObjs(temps.(map[string]interface{}))
-		} else {
-			ClearMap(el.TemporaryVariables)
-		}
-
-		newThread.CallStackAdd(el)
-	}
-
-	if prevContentObjPath, ok := jThreadObj["previousContentObject"]; ok {
-		prevPath := NewPathFromString(prevContentObjPath.(string))
-		newThread.PreviousPointer = storyContext.PointerAtPath(prevPath)
-	}
-
-	return newThread
-}
-
-func (s *Thread) Copy() *Thread {
-
-	threadCopy := NewThread()
-	threadCopy.ThreadIndex = s.ThreadIndex
-	threadCopy.PreviousPointer = s.PreviousPointer
-
-	for _, e := range s.CallStack() {
-		threadCopy.CallStackAdd(e.Copy())
-	}
-
-	return threadCopy
-}
-
-// TODO: Thread.WriteJson
-
 type CallStack struct {
 
 	// Private
 	_threads       []*Thread
 	_threadCounter int
 	_startOfRoot   Pointer
-}
-
-func (s *CallStack) Depth() int {
-
-	return len(s.Elements())
 }
 
 func (s *CallStack) CurrentElementIndex() int {
@@ -164,13 +20,13 @@ func (s *CallStack) CurrentElementIndex() int {
 
 func (s *CallStack) Elements() []*Element {
 
-	return s.CurrentThread().CallStack()
+	return s.CurrentThread().Elements()
 }
 
 func (s *CallStack) CurrentElement() *Element {
 
 	thread := s._threads[len(s._threads)-1]
-	cs := thread.CallStack()
+	cs := thread.Elements()
 	return cs[len(cs)-1]
 }
 
@@ -182,7 +38,7 @@ func (s *CallStack) CurrentThread() *Thread {
 func (s *CallStack) SetCurrentThread(value *Thread) {
 
 	// Debug.Assert (_threads.Count == 1, "Shouldn't be directly setting the current thread when we have a stack of them");
-	s._threads = append(s._threads, value)
+	s._threads = []*Thread{value}
 }
 
 func (s *CallStack) CanPop() bool {
@@ -215,7 +71,7 @@ func NewCallStackFromCallStack(toCopy *CallStack) *CallStack {
 func (s *CallStack) Reset() {
 
 	s._threads = []*Thread{NewThread()}
-	s._threads[0].CallStackAdd(NewElement(Tunnel, s._startOfRoot, false))
+	s._threads[0].Add(NewElement(Tunnel, s._startOfRoot, false))
 }
 
 // SetJsonToken
@@ -244,16 +100,16 @@ func (s *CallStack) SetJsonToken(jObject map[string]interface{}, storyContext *S
 func (s *CallStack) PushThread() {
 
 	newThread := s.CurrentThread().Copy()
-	newThread.ThreadIndex = s._threadCounter
 	s._threadCounter++
+	newThread.ThreadIndex = s._threadCounter
 	s._threads = append(s._threads, newThread)
 }
 
 func (s *CallStack) ForkThread() *Thread {
 
 	forkedThread := s.CurrentThread().Copy()
-	forkedThread.ThreadIndex = s._threadCounter
 	s._threadCounter++
+	forkedThread.ThreadIndex = s._threadCounter
 	return forkedThread
 }
 
@@ -277,16 +133,13 @@ func (s *CallStack) ElementIsEvaluateFromGame() bool {
 	return s.CurrentElement().PushPopType() == FunctionEvaluationFromGame
 }
 
-// (default) externalEvaluationStackHeight: 0
-// (default) outputStreamLengthWithPushed: 0
 func (s *CallStack) Push(newType PushPopType, newExternalEvaluationStackHeight int, newOutputStreamLengthWithPushed int) {
 
 	element := NewElement(newType, s.CurrentElement().CurrentPointer, false)
 	element.EvaluationStackHeightWhenPushed = newExternalEvaluationStackHeight
 	element.FunctionStartInOutputStream = newOutputStreamLengthWithPushed
 
-	//s.Elements().Add(element)
-	s.CurrentThread().CallStackAdd(element)
+	s.CurrentThread().Add(element)
 }
 
 func (s *CallStack) CanPopWith(pushPopType PushPopType) bool {
@@ -306,9 +159,7 @@ func (s *CallStack) Pop(pushPopType PushPopType) {
 
 	if s.CanPopWith(pushPopType) {
 
-		//s.Elements().RemoveAt(s.Elements().Count() - 1)
-		s.CurrentThread().CallStackRemoveLast()
-
+		s.CurrentThread().RemoveLast()
 		return
 	}
 
@@ -318,14 +169,12 @@ func (s *CallStack) Pop(pushPopType PushPopType) {
 func (s *CallStack) GetTemporaryVariableWithName(name string, contextIndex int) Object {
 
 	if contextIndex == -1 {
-
 		contextIndex = s.CurrentElementIndex() + 1
 	}
 
 	contextElement := s.Elements()[contextIndex-1]
 
 	if varValue, ok := contextElement.TemporaryVariables[name]; ok {
-
 		return varValue
 	}
 
@@ -335,19 +184,16 @@ func (s *CallStack) GetTemporaryVariableWithName(name string, contextIndex int) 
 func (s *CallStack) SetTemporaryVariable(name string, value Object, declareNew bool, contextIndex int) {
 
 	if contextIndex == -1 {
-
 		contextIndex = s.CurrentElementIndex() + 1
 	}
 
 	contextElement := s.Elements()[contextIndex-1]
 
-	if _, ok := contextElement.TemporaryVariables[name]; ok && declareNew == false {
-
+	if _, ok := contextElement.TemporaryVariables[name]; ok == false && declareNew == false {
 		panic("Could not find temporary variable to set: " + name)
 	}
 
 	if oldValue, ok := contextElement.TemporaryVariables[name]; ok {
-
 		RetainListOriginsForAssignment(oldValue, value)
 	}
 
@@ -367,11 +213,14 @@ func (s *CallStack) ContextForVariableNamed(name string) int {
 		return s.CurrentElementIndex() + 1
 	}
 
+	// Global
 	return 0
 }
 
 func (s *CallStack) ThreadWithIndex(index int) *Thread {
 
+	// Searches for a thread that matches the given index
+	// and returns the first occurrence
 	for _, t := range s._threads {
 		if t.ThreadIndex == index {
 			return t
@@ -394,15 +243,15 @@ func (s *CallStack) CallStackTrace() string {
 		}
 		sb.WriteString(fmt.Sprintf("=== THREAD %d/%d %s===\n", t+1, len(s._threads), isCurrentStr))
 
-		for i := 0; i < len(thread.CallStack()); i++ {
+		for i := 0; i < len(thread.Elements()); i++ {
 
-			if thread.CallStack()[i].PushPopType() == Function {
+			if thread.Elements()[i].PushPopType() == Function {
 				sb.WriteString("  [FUNCTION] \n")
 			} else {
 				sb.WriteString("  [TUNNEL] \n")
 			}
 
-			pointer := thread.CallStack()[i].CurrentPointer
+			pointer := thread.Elements()[i].CurrentPointer
 			if !pointer.IsNull() {
 				sb.WriteString("<SOMEWHERE IN \n")
 				sb.WriteString(pointer.Container.Path(pointer.Container).String())

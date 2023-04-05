@@ -36,6 +36,5 @@ func (s *Choice) SetPathStringOnChoice(value string) {
 func NewChoice() *Choice {
 
 	newChoice := new(Choice)
-
 	return newChoice
 }

@@ -19,12 +19,15 @@ func main() {
 
 	story := runtime.NewStory(string(jsonBytes))
 
-	//fmt.Println(story.Continue())
+	story.OnError = new(runtime.ErrorHandlerEvent)
+	story.OnError.Register(func(message string, typ runtime.ErrorType) {
+		fmt.Printf("Error[%v]: %s\n", typ, message)
+	})
 
 	for {
 
 		for story.CanContinue() {
-			fmt.Println(story.Continue())
+			fmt.Println(story.ContinueMaximally())
 		}
 
 		choices := story.CurrentChoices()

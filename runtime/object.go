@@ -105,7 +105,7 @@ func (s *ObjectImpl) Copy() Object {
 	panic(fmt.Sprintf("%v doesn't support copying", s))
 }
 
-func ResolvePath(target Object, pathToResolve *Path) *SearchResult {
+func ResolvePath(target Object, pathToResolve *Path) SearchResult {
 
 	if pathToResolve.IsRelative() {
 
@@ -199,6 +199,8 @@ func ConvertPathToRelative(target Object, globalPath *Path) *Path {
 			break
 		}
 	}
+
+	fmt.Println(globalPath)
 
 	// No shared path components, so just use global path
 	if lastSharedPathCompIndex == -1 {

@@ -29,39 +29,9 @@ const inkVersionMinimumCompatible = 10
 
 type OnEvaluateFunction func(functionName string, arguments []interface{})
 
-type OnEvaluateFunctionEvent struct {
-	Event[OnEvaluateFunction]
-}
-
-func (s *OnEvaluateFunctionEvent) Emit(functionName string, arguments []interface{}) {
-	for _, fn := range s.h {
-		fn(functionName, arguments)
-	}
-}
-
 type OnChoosePathString func(path string, arguments []interface{})
 
-type OnChoosePathStringEvent struct {
-	Event[OnChoosePathString]
-}
-
-func (s *OnChoosePathStringEvent) Emit(path string, arguments []interface{}) {
-	for _, fn := range s.h {
-		fn(path, arguments)
-	}
-}
-
 type OnCompleteEvaluateFunction func(functionName string, arguments []interface{}, textOutput string, result interface{})
-
-type OnCompleteEvaluateFunctionEvent struct {
-	Event[OnCompleteEvaluateFunction]
-}
-
-func (s *OnCompleteEvaluateFunctionEvent) Emit(functionName string, arguments []interface{}, textOutput string, result interface{}) {
-	for _, fn := range s.h {
-		fn(functionName, arguments, textOutput, result)
-	}
-}
 
 type VariableObserver func(variableName, newValue interface{})
 
@@ -332,10 +302,7 @@ func (s *Story) ResetState() {
 	s.IfAsyncWeCant("ResetState")
 
 	s._state = NewStoryState(s)
-
-	if s._state.VariablesState().VariableChangedEvent == nil {
-		s._state.VariablesState().VariableChangedEvent = new(VariableChangedEvent)
-	}
+	s._state.VariablesState().VariableChangedEvent = new(VariableChangedEvent)
 	s._state.VariablesState().VariableChangedEvent.Register(s.VariableStateDidChangeEvent)
 
 	s.ResetGlobals()
@@ -362,8 +329,6 @@ func (s *Story) ResetGlobals() {
 
 	if _, ok := s._mainContentContainer.NamedContent()["global decl"]; ok {
 		originalPointer := s._state.CurrentPointer()
-
-		//fmt.Println(s.State().PreviousPointer() == nil)
 
 		s.ChoosePath(NewPathFromString("global decl"), false)
 
@@ -433,9 +398,6 @@ func (s *Story) ContinueAsync(millisecsLimitAsync float64) {
 	s.ContinueInternal(millisecsLimitAsync)
 }
 
-// TODO: replace with context i.e. ContinueWithContext(ctx)
-// ContinueInternal
-// (default) millisecsLimitAsync: 0
 func (s *Story) ContinueInternal(millisecsLimitAsync float64) {
 
 	// if( _profiler != null )
@@ -507,7 +469,7 @@ func (s *Story) ContinueInternal(millisecsLimitAsync float64) {
 	//  - error
 	//
 	// Successfully finished evaluation in time (or in error)
-	if outputStreamEndsInNewline || s.CanContinue() {
+	if outputStreamEndsInNewline || !s.CanContinue() {
 
 		// Need to rewind, due to evaluating further than we should?
 		if s._stateSnapshotAtLastNewline != nil {
@@ -655,7 +617,9 @@ func (s *Story) ContinueSingleStep() bool {
 
 				// Hit a newline for sure, we're done
 				return true
-			} else if change == NewlineRemoved {
+			}
+
+			if change == NewlineRemoved {
 				// Newline that previously existed is no longer valid - e.g.
 				// glue was encounted that caused it to be removed.
 				s.DiscardSnapshot()
@@ -698,6 +662,7 @@ func (s *Story) CalculateNewlineOutputStateChange(prevText string, currText stri
 	// Simple case: nothing's changed, and we still have a newline
 	// at the end of the current content
 	newlineStillExists := len(currText) >= len(prevText) && len(prevText) > 0 && currText[len(prevText)-1] == '\n'
+
 	if prevTagCount == currTagCount && len(prevText) == len(currText) && newlineStillExists {
 		return NoChange
 	}
@@ -742,7 +707,7 @@ func (s *Story) ContinueMaximally() string {
 	return sb.String()
 }
 
-func (s *Story) ContentAtPath(path *Path) *SearchResult {
+func (s *Story) ContentAtPath(path *Path) SearchResult {
 
 	return s.MainContentContainer().ContentAtPath(path, 0, -1)
 }
@@ -766,7 +731,8 @@ func (s *Story) PointerAtPath(path *Path) Pointer {
 	p := Pointer{}
 	pathLengthToUse := path.Length()
 
-	var result *SearchResult
+	var result SearchResult
+
 	if path.LastComponent().IsIndex() {
 		pathLengthToUse = path.Length() - 1
 		result = s.MainContentContainer().ContentAtPath(path, 0, pathLengthToUse)
@@ -1006,8 +972,7 @@ func (s *Story) VisitChangedContainersDueToDivert() {
 	// First, find the previously open set of containers
 	s._prevContainers = s._prevContainers[:0]
 	if !previousPointer.IsNull() {
-		r, _ := previousPointer.Resolve().(*Container)
-		prevAncestor := r
+		prevAncestor, _ := previousPointer.Resolve().(*Container)
 		if prevAncestor == nil {
 			prevAncestor = previousPointer.Container
 		}
@@ -1029,9 +994,8 @@ func (s *Story) VisitChangedContainersDueToDivert() {
 
 	allChildrenEnteredAtStart := true
 
-	contains := func() bool {
-		containsCurrent := true
-		//_prevContainers.Contains(currentContainerAncestor)
+	check := func() bool {
+		containsCurrent := false
 		for _, v := range s._prevContainers {
 			if v == currentContainerAncestor {
 				containsCurrent = true
@@ -1042,7 +1006,7 @@ func (s *Story) VisitChangedContainersDueToDivert() {
 		return !containsCurrent || currentContainerAncestor.CountingAtStartOnly
 	}
 
-	for currentContainerAncestor != nil && contains() {
+	for currentContainerAncestor != nil && check() {
 
 		// Check whether this ancestor container is being entered at the start,
 		// by checking whether the child object is the first.
@@ -1232,7 +1196,10 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 		}
 
 		return true
-	} else if evalCommand, isControlCommand := contentObj.(*ControlCommand); isControlCommand {
+	}
+
+	// Control Command
+	if evalCommand, isControlCommand := contentObj.(*ControlCommand); isControlCommand {
 		// Start/end an expression evaluation? Or print out the result?
 
 		switch evalCommand.CommandType {
@@ -1296,13 +1263,16 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 				popped := s.State().PopEvaluationStack()
 				overrideTunnelReturnTarget, _ = popped.(*DivertTargetValue)
 				if overrideTunnelReturnTarget == nil {
+					panic("Expected void if ->-> doesn't override target")
 					//Assert (popped is Void, "Expected void if ->-> doesn't override target");
 				}
 			}
 
 			if s.State().TryExitFunctionEvaluationFromGame() {
 				break
-			} else if s.State().CallStack().CurrentElement().PushPopType() != popType || !s.State().CallStack().CanPop() {
+			}
+
+			if s.State().CallStack().CurrentElement().PushPopType() != popType || !s.State().CallStack().CanPop() {
 
 				names := make(map[PushPopType]string, 0)
 				names[Function] = "function return statement (~ return)"
@@ -1329,6 +1299,10 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 		case CommandTypeBeginString:
 
 			s.State().PushToOutputStream(evalCommand)
+
+			if s.State().InExpressionEvaluation() == false {
+				panic("Expected to be in an expression when evaluating a string")
+			}
 
 			//Assert (state.inExpressionEvaluation == true, "Expected to be in an expression when evaluating a string");
 			s.State().SetInExpressionEvaluation(false)
@@ -1371,18 +1345,18 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 				contentStackForTag := NewStack[Object]()
 				outputCountConsumed := 0
 
-				for i := len(s.State().OutputStream()); i >= 0; i-- {
+				for i := len(s.State().OutputStream()) - 1; i >= 0; i-- {
 
 					obj := s.State().OutputStream()[i]
 
 					outputCountConsumed++
-					if command, isControlCommand := obj.(*ControlCommand); isControlCommand {
+					if command, ok := obj.(*ControlCommand); ok {
 						if command.CommandType == CommandTypeBeginTag {
 							break
-						} else {
-							s.Error("Unexpected ControlCommand while extracting tag from choice")
-							break
 						}
+
+						s.Error("Unexpected ControlCommand while extracting tag from choice")
+						break
 					}
 
 					if _, isStringValue := obj.(*StringValue); isStringValue {
@@ -1428,7 +1402,7 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 
 				outputCountConsumed++
 
-				if command, isControlCommand := obj.(*ControlCommand); isControlCommand && command.CommandType == CommandTypeBeginString {
+				if command, ok := obj.(*ControlCommand); ok && command.CommandType == CommandTypeBeginString {
 					break
 				}
 
@@ -1469,7 +1443,7 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 
 		case CommandTypeTurns:
 
-			s.State().PushEvaluationStack(NewIntValueFromInt(s.State().CurrentTurnIndex()))
+			s.State().PushEvaluationStack(NewIntValueFromInt(s.State().CurrentTurnIndex() + 1))
 
 		case CommandTypeTurnsSince:
 			fallthrough
@@ -1621,7 +1595,7 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 			min, _ := s.State().PopEvaluationStack().(Value)
 			max, _ := s.State().PopEvaluationStack().(Value)
 
-			targetList := s.State().PopEvaluationStack().(*ListValue)
+			targetList, _ := s.State().PopEvaluationStack().(*ListValue)
 
 			if targetList == nil || min == nil || max == nil {
 				panic("Expected list, minimum and maximum for LIST_RANGE")
@@ -1680,7 +1654,10 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 		}
 
 		return true
-	} else if varAss, isVariableAssignment := contentObj.(*VariableAssignment); isVariableAssignment {
+	}
+
+	// Variable Assignment
+	if varAss, isVariableAssignment := contentObj.(*VariableAssignment); isVariableAssignment {
 
 		assignedVal := s.State().PopEvaluationStack()
 
@@ -1691,7 +1668,10 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 		s.State().VariablesState().Assign(varAss, assignedVal)
 
 		return true
-	} else if varRef, isVariableReference := contentObj.(*VariableReference); isVariableReference {
+	}
+
+	// Variable reference
+	if varRef, isVariableReference := contentObj.(*VariableReference); isVariableReference {
 
 		var foundValue Object
 
@@ -1714,7 +1694,10 @@ func (s *Story) PerformLogicAndFlowControl(contentObj Object) bool {
 		s.State().PushEvaluationStack(foundValue)
 
 		return true
-	} else if nfunc, isNativeFunctionCall := contentObj.(*NativeFunctionCall); isNativeFunctionCall {
+	}
+
+	// Native function call
+	if nfunc, isNativeFunctionCall := contentObj.(*NativeFunctionCall); isNativeFunctionCall {
 
 		funcParams := s.State().PopEvaluationStackEx(nfunc.NumberOfParameters())
 		result := nfunc.Call(funcParams)

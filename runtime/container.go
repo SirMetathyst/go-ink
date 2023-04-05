@@ -19,17 +19,14 @@ type Container struct {
 }
 
 func (s *Container) Name() string {
-
 	return s._name
 }
 
 func (s *Container) SetName(value string) {
-
 	s._name = value
 }
 
 func (s *Container) Content() []Object {
-
 	return s._content
 }
 
@@ -45,7 +42,6 @@ func (s *Container) ContentIndexOf(v Object) int {
 }
 
 func (s *Container) NamedContent() map[string]NamedContent {
-
 	return s._namedContent
 }
 
@@ -186,7 +182,7 @@ func (s *Container) AddToNamedContentOnly(namedContentObj NamedContent) {
 	runtimeObj := namedContentObj.(Object)
 	runtimeObj.SetParent(s)
 
-	s.NamedContent()[namedContentObj.Name()] = namedContentObj
+	s._namedContent[namedContentObj.Name()] = namedContentObj
 }
 
 func (s *Container) AddContentsOfContainer(otherContainer *Container) {
@@ -201,7 +197,7 @@ func (s *Container) AddContentsOfContainer(otherContainer *Container) {
 	}
 }
 
-func (s *Container) ContentAtPath(path *Path, partialPathStart int, partialPathLength int) *SearchResult {
+func (s *Container) ContentAtPath(path *Path, partialPathStart int, partialPathLength int) SearchResult {
 
 	if partialPathLength == -1 {
 		partialPathLength = path.Length()
@@ -255,7 +251,7 @@ func (s *Container) ContentWithPathComponent(component *PathComponent) Object {
 	if component.IsIndex() {
 
 		if component.Index() >= 0 && component.Index() < len(s.Content()) {
-			return s.Content()[component.Index()]
+			return s._content[component.Index()]
 		}
 
 		// When path is out of range, quietly return nil

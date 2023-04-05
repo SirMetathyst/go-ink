@@ -49,7 +49,6 @@ func (s *ChoicePoint) SetFlags(value int) {
 	s.HasChoiceOnlyContent = (value & 4) > 0
 	s.IsInvisibleDefault = (value & 8) > 0
 	s.OnceOnly = (value & 16) > 0
-
 }
 
 func (s *ChoicePoint) PathOnChoice() *Path {
@@ -60,7 +59,7 @@ func (s *ChoicePoint) PathOnChoice() *Path {
 		choiceTargetObj := s.ChoiceTarget()
 
 		if choiceTargetObj != nil {
-			s._pathOnChoice = choiceTargetObj.Path(s)
+			s._pathOnChoice = choiceTargetObj.Path(choiceTargetObj)
 		}
 	}
 
@@ -68,26 +67,22 @@ func (s *ChoicePoint) PathOnChoice() *Path {
 }
 
 func (s *ChoicePoint) SetPathOnChoice(value *Path) {
-
 	s._pathOnChoice = value
 }
 
 func (s *ChoicePoint) ChoiceTarget() *Container {
-
 	return ResolvePath(s, s._pathOnChoice).Container()
 }
 
 func (s *ChoicePoint) PathStringOnChoice() string {
-
 	return CompactPathString(s, s.PathOnChoice())
 }
 
 func (s *ChoicePoint) SetPathStringOnChoice(value string) {
-
 	s.SetPathOnChoice(NewPathFromString(value))
 }
 
-func NewChoicePointOnceOnly(onceOnly bool) *ChoicePoint {
+func NewChoicePointWith(onceOnly bool) *ChoicePoint {
 
 	newChoicePoint := new(ChoicePoint)
 	newChoicePoint.OnceOnly = onceOnly

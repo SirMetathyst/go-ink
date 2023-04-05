@@ -99,10 +99,15 @@ func ClearMap[TKey comparable, TValue any](v map[TKey]TValue) {
 
 func Remove[T comparable](s *[]T, v interface{}) {
 	n := *s
+	c := len(*s)
 	for index, vv := range n {
 		if vv == v {
 			n = append(n[:index], n[index+1:]...)
 		}
+	}
+	nc := len(*s)
+	if nc == c {
+		panic("should not happen")
 	}
 }
 

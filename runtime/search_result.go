@@ -12,11 +12,11 @@ type SearchResult struct {
 	Approximate bool
 }
 
-func NewSearchResult() *SearchResult {
-	return new(SearchResult)
+func NewSearchResult() SearchResult {
+	return SearchResult{}
 }
 
-func (s *SearchResult) CorrectObj() Object {
+func (s SearchResult) CorrectObj() Object {
 
 	if s.Approximate {
 		return nil
@@ -25,7 +25,7 @@ func (s *SearchResult) CorrectObj() Object {
 	return s.Obj
 }
 
-func (s *SearchResult) Container() *Container {
+func (s SearchResult) Container() *Container {
 
 	container, _ := s.Obj.(*Container)
 	return container

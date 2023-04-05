@@ -333,10 +333,14 @@ func JTokenToRuntimeObject(token interface{}) Object {
 
 		// String value
 		firstChar := str[0]
+
 		if firstChar == '^' {
 			fmt.Println("String value", str[1:])
 			return NewStringValueFromString(str[1:])
-		} else if firstChar == '\n' && len(str) == 1 {
+		}
+
+		// String value (newline)
+		if firstChar == '\n' && len(str) == 1 {
 			fmt.Println("String value: \\n")
 			return NewStringValueFromString("\n")
 		}
@@ -349,10 +353,13 @@ func JTokenToRuntimeObject(token interface{}) Object {
 
 		// Control commands (would looking up in a hash set be faster?)
 		for i := 0; i < len(controlCommandNames); i++ {
-			cmdName, _ := controlCommandNames[CommandType(i)]
+			cmdName, isInMap := controlCommandNames[CommandType(i)]
 			if str == cmdName {
 				fmt.Println("CommandType: ", CommandType(i))
 				return NewControlCommand(CommandType(i))
+			}
+			if !isInMap {
+				panic("unknown command type")
 			}
 		}
 
@@ -372,7 +379,9 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		if str == "->->" {
 			fmt.Println("Pop: ->->")
 			return NewPopFunctionCommand()
-		} else if str == "~ret" {
+		}
+
+		if str == "~ret" {
 			fmt.Println("~ret", str)
 			return NewPopFunctionCommand()
 		}
@@ -389,6 +398,8 @@ func JTokenToRuntimeObject(token interface{}) Object {
 		// Divert target value to path
 		if propValue, ok := obj["^->"]; ok {
 			fmt.Println("Divert Target", propValue.(string))
+			//path := NewPathFromString(propValue.(string))
+			//fmt.Println("Path Resolve: ", path.String())
 			return NewDivertTargetValueFromPath(NewPathFromString(propValue.(string)))
 		}
 
